@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Script Studio</title>
+  <link rel="icon" href="/favicon.svg" />
+  <link rel="stylesheet" href="/style.css?v=20260622" />
+</head>
+<body>
+  <main id="layoutRoot" class="layout">
+    <aside class="sidebar">
+      <div class="brand">SCRIPT STUDIO</div>
+      <div class="section-title">
+        <h2>分组</h2>
+        <button id="addGroupBtn" class="icon-btn" title="新增分组">+</button>
+      </div>
+      <div id="groupList" class="group-list"></div>
+    </aside>
+
+    <div class="panel-resizer" data-resizer="left" title="拖动调整分组和脚本列表间距"></div>
+
+    <section class="scripts-panel">
+      <div class="panel-header">
+        <h1 id="listTitle">全部脚本</h1>
+        <button id="addScriptBtn" class="secondary-btn">新增脚本</button>
+      </div>
+      <div id="scriptList" class="script-list"></div>
+    </section>
+
+    <div class="panel-resizer" data-resizer="right" title="拖动调整脚本列表和详情区域间距"></div>
+
+    <section class="terminal-panel">
+      <!-- 顶部：脚本名 + 操作按钮 -->
+      <div class="terminal-header">
+        <div class="selected-name-row">
+          <h1 id="selectedTitle">未选择脚本</h1>
+        </div>
+        <div class="actions selected-actions-row">
+          <button id="runBtn" class="primary-btn" disabled>运行</button>
+          <button id="exploreBtn" class="secondary-btn" disabled>文件夹</button>
+          <button id="stopBtn" class="danger-btn" disabled>停止</button>
+        </div>
+      </div>
+
+      <!-- 运行实例选项卡（动态生成） -->
+      <div id="runTabs" class="terminal-tabs run-tabs"></div>
+
+      <!-- 终端输出区（每个 tab 共用，切换时替换内容） -->
+      <div id="terminal" class="terminal" aria-label="操作输出">选择左侧脚本后，点击「运行」执行，或点击「文件夹」在资源管理器中打开。</div>
+
+      <!-- 底部 stdin 输入框 -->
+      <div class="stdin-row">
+        <input id="stdinInput" class="stdin-input" type="text" placeholder="向脚本发送输入，按 Enter 发送…" disabled />
+      </div>
+    </section>
+  </main>
+
+  <dialog id="scriptDialog">
+    <form id="scriptForm" method="dialog" class="dialog-form">
+      <h2 id="scriptDialogTitle">新增脚本</h2>
+      <input type="hidden" id="scriptId" />
+      <label>名称<input id="scriptName" required /></label>
+      <label>脚本路径<input id="scriptPath" required placeholder="bat/demo.bat 或 D:\\tools\\demo.ps1" /></label>
+      <label>分组<select id="scriptGroup"></select></label>
+      <label>说明<textarea id="scriptDescription" placeholder="记录这个脚本的用途、注意事项或运行说明"></textarea></label>
+      <label>启动前释放端口<input id="scriptPorts" placeholder="3100, 8080" /></label>
+      <div class="dialog-actions">
+        <button value="cancel" type="button" id="cancelScriptBtn">取消</button>
+        <button class="primary-btn" value="default">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="appDialog" class="app-dialog">
+    <form id="appDialogForm" method="dialog" class="dialog-form">
+      <h2 id="appDialogTitle">提示</h2>
+      <p id="appDialogMessage" class="dialog-message"></p>
+      <label id="appDialogInputWrap" class="dialog-input-wrap">输入内容<input id="appDialogInput" /></label>
+      <div class="dialog-actions">
+        <button value="cancel" type="button" id="appDialogCancelBtn">取消</button>
+        <button value="default" class="primary-btn" id="appDialogConfirmBtn">确定</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="/app.js?v=20260622"></script>
+</body>
+</html>
