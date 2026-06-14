@@ -298,15 +298,35 @@ function looksLikeUtf16le(buffer) {
   return pairs > 0 && zeroHighBytes / pairs > 0.5;
 }
 
+function sanitizeTerminalOutput(text) {
+  let s = String(text || '');
+  // 常见 TTY 动画会用 ESC[999D ESC[J 回到行首并清空当前行。
+  // 浏览器里不是完整终端，先转成 \r，由前端按“覆盖当前行”处理。
+  s = s.replace(/\x1b\[[0-9;]*D\x1b\[[0-9;]*J/g, '\r');
+  s = s.replace(/\x1b\[[0-9;]*G\x1b\[[0-9;]*J/g, '\r');
+  // 光标显示/隐藏等私有模式控制。
+  s = s.replace(/\x1b\[\?[0-9;]*[A-Za-z]/g, '');
+  // SGR 颜色、粗体、清屏、移动光标等 CSI 序列。
+  s = s.replace(/\x1b\[[0-9;:;?]*[ -/]*[@-~]/g, '');
+  // OSC 标题等序列。
+  s = s.replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g, '');
+  // 其它少见 ANSI/VT 控制序列。
+  s = s.replace(/\x1b[@-_][0-?]*[ -/]*[@-~]/g, '');
+  return s;
+}
+
 function decodeOutput(chunk) {
-  if (!Buffer.isBuffer(chunk)) return String(chunk || '');
-  if (looksLikeUtf16le(chunk)) return chunk.toString('utf16le');
-  const utf8 = chunk.toString('utf8');
-  if (!utf8.includes('\uFFFD')) return utf8;
-  if (iconv) {
-    try { return iconv.decode(chunk, 'cp936'); } catch {}
+  if (!Buffer.isBuffer(chunk)) return sanitizeTerminalOutput(String(chunk || ''));
+  let decoded;
+  if (looksLikeUtf16le(chunk)) decoded = chunk.toString('utf16le');
+  else {
+    const utf8 = chunk.toString('utf8');
+    if (!utf8.includes('\uFFFD')) decoded = utf8;
+    else if (iconv) {
+      try { decoded = iconv.decode(chunk, 'cp936'); } catch { decoded = utf8; }
+    } else decoded = utf8;
   }
-  return utf8;
+  return sanitizeTerminalOutput(decoded);
 }
 
 function runScript(script, ws) {
@@ -315,19 +335,34 @@ function runScript(script, ws) {
     ws.send(JSON.stringify({ type: 'error', message: `Script not found: ${script.path}` })); return null;
   }
   const ext = path.extname(absolute).toLowerCase();
-  const isPs = ext === '.ps1' || script.shell === 'powershell';
+  const shellName = String(script.shell || '').toLowerCase();
+  const isPs = ext === '.ps1' || shellName === 'powershell';
+  const isPy = ext === '.py' || shellName === 'python';
+  const childEnv = {
+    ...process.env,
+    SCRIPT_STUDIO_ROOT: ROOT,
+    PYTHONIOENCODING: 'utf-8',
+    PYTHONUTF8: '1',
+    PYTHONUNBUFFERED: '1'
+  };
   let child;
   if (isPs) {
     child = spawn(
       'powershell.exe',
       ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', absolute],
-      { cwd: path.dirname(absolute), windowsHide: false, shell: false, env: { ...process.env, SCRIPT_STUDIO_ROOT: ROOT } }
+      { cwd: path.dirname(absolute), windowsHide: false, shell: false, env: childEnv }
+    );
+  } else if (isPy) {
+    child = spawn(
+      'python',
+      ['-u', absolute],
+      { cwd: path.dirname(absolute), windowsHide: false, shell: false, env: childEnv }
     );
   } else {
     child = spawn(
       'cmd.exe',
       ['/d', '/s', '/c', absolute],
-      { cwd: path.dirname(absolute), windowsHide: false, shell: false, env: { ...process.env, SCRIPT_STUDIO_ROOT: ROOT } }
+      { cwd: path.dirname(absolute), windowsHide: false, shell: false, env: childEnv }
     );
   }
   child.stdout.on('data', (c) => ws.send(JSON.stringify({ type: 'data', data: decodeOutput(c) })));

@@ -150,8 +150,7 @@ function switchRunTab(tabId) {
   if (!session) return;
 
   // 恢复该 tab 的输出
-  $('terminal').textContent = session.output;
-  $('terminal').scrollTop = $('terminal').scrollHeight;
+  renderTerminalOutput(session);
 
   // 更新选中脚本为该 tab 对应的脚本
   state.selectedScript = state.config.scripts.find((s) => s.id === session.scriptId) || state.selectedScript;
@@ -205,6 +204,30 @@ function setActiveTabText(text) {
   const el = $('terminal');
   el.textContent = text;
   el.scrollTop = el.scrollHeight;
+}
+
+function mergeTerminalOutput(output, text) {
+  let result = String(output || '');
+  for (const char of String(text || '')) {
+    if (char === '\r') {
+      const lastNewline = result.lastIndexOf('\n');
+      result = lastNewline >= 0 ? result.slice(0, lastNewline + 1) : '';
+    } else {
+      result += char;
+    }
+  }
+  return result;
+}
+
+function renderTerminalOutput(session) {
+  const el = $('terminal');
+  el.textContent = session?.output || '';
+  el.scrollTop = el.scrollHeight;
+}
+
+function appendTerminalData(tabId, session, text) {
+  session.output = mergeTerminalOutput(session.output, text);
+  if (state.activeTabId === tabId) renderTerminalOutput(session);
 }
 
 // ── 加载配置 ──────────────────────────────────────────────
@@ -441,12 +464,7 @@ function runSelected() {
         renderRunTabs();
         renderSelected();
       } else if (msg.type === 'data') {
-        session.output += msg.data;
-        if (state.activeTabId === tabId) {
-          const el = $('terminal');
-          el.textContent += msg.data;
-          el.scrollTop = el.scrollHeight;
-        }
+        appendTerminalData(tabId, session, msg.data);
       } else if (msg.type === 'exit') {
         const exitMsg = `\n脚本已退出，退出码: ${msg.code}`;
         session.output += exitMsg;
