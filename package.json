@@ -1,0 +1,20 @@
+{
+  "name": "script-studio",
+  "version": "1.0.0",
+  "description": "A local web dashboard for organizing, launching, and monitoring BAT and PowerShell scripts.",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "check": "node check.js",
+    "test": "node --test tests/run-session-store.test.js"
+  },
+  "dependencies": {
+    "express": "^4.18.3",
+    "ws": "^8.17.1"
+  },
+  "optionalDependencies": {
+    "iconv-lite": "^0.6.3"
+  }
+}

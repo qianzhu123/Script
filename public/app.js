@@ -39,8 +39,68 @@ function basename(filePath) {
 }
 
 function displayScriptNameFromPath(filePath) {
-  const fileName = basename(filePath).replace(/\.lnk$/i, '');
+  const fileName = basename(stripOuterQuotes(filePath)).replace(/\.lnk$/i, '');
   return fileName.replace(/\.(bat|cmd|ps1|js|vbs|wsf|py)$/i, '');
+}
+
+function stripOuterQuotes(value) {
+  let text = String(value || '')
+    .trim()
+    .replace(/[\u200B-\u200D\uFEFF]/g, '');
+
+  const wrappers = [
+    ['\\"', '\\"'],
+    ["\\'", "\\'"],
+    ['"', '"'],
+    ["'", "'"],
+    ['“', '”'],
+    ['‘', '’']
+  ];
+
+  let changed = true;
+  while (changed && text.length >= 2) {
+    changed = false;
+
+    for (const [left, right] of wrappers) {
+      if (text.startsWith(left) && text.endsWith(right)) {
+        text = text.slice(left.length, text.length - right.length).trim();
+        changed = true;
+      }
+    }
+
+    const before = text;
+    text = text
+      .replace(/^(?:\\["']|["'“‘])+/, '')
+      .replace(/(?:\\["']|["'”’])+$/, '')
+      .trim();
+    if (text !== before) changed = true;
+  }
+  return text;
+}
+
+function cleanScriptPathInput() {
+  const input = $('scriptPath');
+  const cleaned = stripOuterQuotes(input.value);
+  if (input.value !== cleaned) input.value = cleaned;
+  return cleaned;
+}
+
+function setupScriptPathAutoClean() {
+  const input = $('scriptPath');
+  const syncName = () => {
+    const path = cleanScriptPathInput();
+    if (path) $('scriptName').value = displayScriptNameFromPath(path);
+  };
+
+  // 输入、粘贴、失焦、按 Enter 保存前都清理一次。
+  // 这样从资源管理器复制的 "D:\\tools\\...\\start.bat" 可以直接粘贴确认。
+  input.addEventListener('input', syncName);
+  input.addEventListener('blur', syncName);
+  input.addEventListener('change', syncName);
+  input.addEventListener('paste', () => setTimeout(syncName, 0));
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') syncName();
+  });
 }
 
 // ── 通用对话框 ────────────────────────────────────────────
@@ -611,7 +671,7 @@ async function saveScript(event) {
   const id = $('scriptId').value;
   const body = {
     name: $('scriptName').value,
-    path: $('scriptPath').value,
+    path: cleanScriptPathInput(),
     groupId: $('scriptGroup').value,
     description: $('scriptDescription').value,
     ports: $('scriptPorts').value
@@ -696,9 +756,7 @@ $('scriptForm').onsubmit = saveScript;
 $('runBtn').onclick = runSelected;
 $('exploreBtn').onclick = exploreSelected;
 $('stopBtn').onclick = stopSelected;
-$('scriptPath').addEventListener('input', () => {
-  if ($('scriptPath').value) $('scriptName').value = displayScriptNameFromPath($('scriptPath').value);
-});
+setupScriptPathAutoClean();
 
 setupStdinInput();
 setupPanelResizers();

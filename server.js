@@ -40,12 +40,53 @@ function makeNewId(name, prefix) {
   return safe || `${prefix}-${Date.now().toString(36)}`;
 }
 
+function stripOuterQuotes(value) {
+  let text = String(value || '')
+    .trim()
+    .replace(/[\u200B-\u200D\uFEFF]/g, '');
+
+  // Windows “复制为路径”通常会得到 "D:\\...\\start.bat"。
+  // 某些场景还会保存成 \"D:\\...\\start.bat\"，所以这里同时处理：
+  // - 普通英文/中文引号包裹
+  // - 被反斜杠转义的外层引号
+  // - 多层误包裹，例如 '\"D:\\a.bat\"'、"'D:\\a.bat'"
+  const wrappers = [
+    ['\\"', '\\"'],
+    ["\\'", "\\'"],
+    ['"', '"'],
+    ["'", "'"],
+    ['“', '”'],
+    ['‘', '’']
+  ];
+
+  let changed = true;
+  while (changed && text.length >= 2) {
+    changed = false;
+
+    for (const [left, right] of wrappers) {
+      if (text.startsWith(left) && text.endsWith(right)) {
+        text = text.slice(left.length, text.length - right.length).trim();
+        changed = true;
+      }
+    }
+
+    // 兜底：如果只有一侧残留了外层引号/转义引号，也去掉。
+    const before = text;
+    text = text
+      .replace(/^(?:\\["']|["'“‘])+/, '')
+      .replace(/(?:\\["']|["'”’])+$/, '')
+      .trim();
+    if (text !== before) changed = true;
+  }
+  return text;
+}
+
 // 路径标准化：
 // - 项目内绝对路径 → 转为相对路径
 // - 项目外绝对路径 → 原样保留（用户配置了外部脚本，合法）
 // - 相对路径 → 标准化斜杠
 function normalizePath(input) {
-  const text = String(input || '').trim().replace(/^"|"$/g, '').replace(/^'|'$/g, '').replace(/\\/g, '/');
+  const text = stripOuterQuotes(input).replace(/\\/g, '/');
   if (!text) return '';
 
   // 绝对路径（Windows 盘符 或 UNC）
@@ -70,7 +111,7 @@ function normalizePath(input) {
 
 // 解析为绝对路径：相对路径拼项目目录，绝对路径直接返回
 function resolveScriptPath(p) {
-  const clean = String(p || '').trim().replace(/^"|"$/g, '').replace(/^'|'$/g, '');
+  const clean = stripOuterQuotes(p);
   if (path.isAbsolute(clean)) return clean;
   return path.resolve(ROOT, clean);
 }
