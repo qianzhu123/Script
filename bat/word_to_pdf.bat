@@ -10,16 +10,16 @@ echo Word to PDF Converter
 echo ========================================
 echo.
 echo Usage:
-echo   Enter a folder containing Word documents.
-echo   All subfolders are included automatically.
+echo   Enter a Word file or a folder containing Word documents.
+echo   Folder input includes all subfolders automatically.
 echo   Each PDF is saved beside its source document.
 echo.
 
 set "INPUT_PATH="
-set /p "INPUT_PATH=Enter Word document folder path: "
+set /p "INPUT_PATH=Enter Word file or folder path: "
 
 if not defined INPUT_PATH (
-    echo [ERROR] Folder path is required.
+    echo [ERROR] File or folder path is required.
     echo.
     pause
     exit /b 1
@@ -176,27 +176,32 @@ function Convert-WithSoffice {
 $InputPath = $env:WORD2PDF_INPUT
 
 if ([string]::IsNullOrWhiteSpace($InputPath)) {
-    throw "Folder path is required."
+    throw "File or folder path is required."
 }
 
 if (-not (Test-Path -LiteralPath $InputPath)) {
-    throw "Folder does not exist: $InputPath"
+    throw "File or folder does not exist: $InputPath"
 }
 
 $resolvedInputPath = Resolve-FullPath $InputPath
 $item = Get-Item -LiteralPath $resolvedInputPath
-if (-not $item.PSIsContainer) {
-    throw "A folder path is required. Received: $resolvedInputPath"
-}
-
 $supportedExtensions = @(".doc", ".docx", ".docm", ".rtf", ".odt")
-$files = [System.IO.Directory]::EnumerateFiles(
-    $item.FullName,
-    "*.*",
-    [System.IO.SearchOption]::AllDirectories
-) |
-    Where-Object { $supportedExtensions -contains ([System.IO.Path]::GetExtension($_).ToLowerInvariant()) } |
-    ForEach-Object { Get-Item -LiteralPath $_ }
+
+if ($item.PSIsContainer) {
+    $files = [System.IO.Directory]::EnumerateFiles(
+        $item.FullName,
+        "*.*",
+        [System.IO.SearchOption]::AllDirectories
+    ) |
+        Where-Object { $supportedExtensions -contains ([System.IO.Path]::GetExtension($_).ToLowerInvariant()) } |
+        ForEach-Object { Get-Item -LiteralPath $_ }
+}
+else {
+    if (-not ($supportedExtensions -contains $item.Extension.ToLowerInvariant())) {
+        throw "Unsupported file type: $($item.Extension)"
+    }
+    $files = @($item)
+}
 
 if (-not $files -or $files.Count -eq 0) {
     throw "No supported Word documents found."
