@@ -12,13 +12,15 @@ function Assert-NotContains([string]$Needle, [string]$Message) {
     if ($source.Contains($Needle)) { $failures.Add($Message) }
 }
 
-Assert-Contains 'Enter Word document folder path:' 'The script must have one folder prompt.'
+Assert-Contains 'Enter Word file or folder path:' 'The script must prompt for a file or folder.'
 Assert-NotContains 'Enter output folder path' 'The output-folder prompt must be removed.'
 Assert-NotContains 'include subfolders?' 'The recursion prompt must be removed.'
 Assert-NotContains 'WORD2PDF_OUTPUT' 'The shared output environment variable must be removed.'
 Assert-NotContains 'WORD2PDF_RECURSE' 'The recursion environment variable must be removed.'
 Assert-Contains 'SearchOption]::AllDirectories' 'Folder discovery must always recurse.'
-Assert-Contains 'A folder path is required.' 'File input must be rejected explicitly.'
+Assert-NotContains 'A folder path is required.' 'Supported file input must not be rejected.'
+Assert-Contains '$files = @($item)' 'A supported file input must become a one-item conversion list.'
+Assert-Contains 'Unsupported file type:' 'Unsupported file input must report its extension.'
 Assert-Contains '$file.DirectoryName' 'Output paths must use each source file directory.'
 Assert-Contains 'Remove-Item -LiteralPath $pdfPath -Force' 'An existing same-name PDF must be replaced explicitly.'
 
