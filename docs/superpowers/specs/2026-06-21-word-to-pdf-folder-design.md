@@ -21,12 +21,22 @@ Simplify `bat/word_to_pdf.bat` so the user enters one Word file or one folder pa
 - Continue using Microsoft Word when available, otherwise LibreOffice/OpenOffice.
 - Keep per-file failure reporting and continue processing the remaining files.
 
+## Downloaded document handling
+
+- Detect whether a source document has a `Zone.Identifier` alternate data stream.
+- For a marked document, copy it to a unique temporary directory and remove the security marker from the temporary copy only.
+- Open the temporary copy in Microsoft Word, but derive the PDF name and destination from the original source document.
+- Delete the temporary copy and directory after the document succeeds or fails.
+- Do not change the original document, including its content, timestamps, or security marker.
+- Open an unmarked local document directly without creating a temporary copy.
+
 ## Implementation shape
 
 - The batch portion sets only `WORD2PDF_INPUT`; output and recursion environment variables are removed.
 - The embedded PowerShell branches on the resolved input item: a directory enumerates with `AllDirectories`; a supported file becomes a one-item file list.
 - Conversion functions derive the target directory from each `FileInfo.DirectoryName` rather than accepting one shared target directory.
 - LibreOffice receives each source document's directory as its `--outdir` value.
+- Microsoft Word receives either the original path or an unblocked temporary-copy path while retaining the original `FileInfo` for output naming.
 
 ## Error handling
 
@@ -43,4 +53,7 @@ Simplify `bat/word_to_pdf.bat` so the user enters one Word file or one folder pa
 - Confirm nested supported documents are discovered.
 - Confirm output paths are derived from each document's own directory.
 - Confirm unsupported file input is rejected.
+- Confirm a marked source selects an unblocked temporary copy and leaves the original `Zone.Identifier` intact.
+- Confirm temporary files are removed after both successful and failed Word opens.
+- Confirm an unmarked source is opened directly.
 - Run a syntax check over the embedded PowerShell payload and a controlled conversion when a suitable test document is available.
