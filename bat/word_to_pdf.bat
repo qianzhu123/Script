@@ -102,6 +102,32 @@ function Test-WordAvailable {
     }
 }
 
+function New-UnblockedWordCopy {
+    param([System.IO.FileInfo]$File)
+
+    $zoneStream = Get-Item -LiteralPath $File.FullName -Stream Zone.Identifier -ErrorAction SilentlyContinue
+    if (-not $zoneStream) {
+        return $null
+    }
+
+    $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ("word_to_pdf_" + [guid]::NewGuid().ToString("N"))
+    try {
+        New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
+        $tempPath = Join-Path $tempDir $File.Name
+        Copy-Item -LiteralPath $File.FullName -Destination $tempPath -Force
+        Unblock-File -LiteralPath $tempPath
+        Write-Info "Using a safe temporary copy for downloaded document: $($File.FullName)"
+        return [pscustomobject]@{
+            Path = $tempPath
+            TempDir = $tempDir
+        }
+    }
+    catch {
+        Remove-Item -LiteralPath $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+        throw
+    }
+}
+
 function Convert-WithWord {
     param([System.IO.FileInfo[]]$Files)
 
@@ -117,8 +143,11 @@ function Convert-WithWord {
             Remove-Item -LiteralPath $pdfPath -Force -ErrorAction SilentlyContinue
 
             $document = $null
+            $openCopy = $null
             try {
-                $document = $word.Documents.Open($file.FullName, $false, $true)
+                $openCopy = New-UnblockedWordCopy -File $file
+                $openPath = if ($openCopy) { $openCopy.Path } else { $file.FullName }
+                $document = $word.Documents.Open($openPath, $false, $true)
                 # 17 = wdExportFormatPDF
                 $document.ExportAsFixedFormat($pdfPath, 17)
                 Write-Ok "Saved: $pdfPath"
@@ -131,6 +160,9 @@ function Convert-WithWord {
                 if ($document) {
                     $document.Close($false)
                     [System.Runtime.InteropServices.Marshal]::ReleaseComObject($document) | Out-Null
+                }
+                if ($openCopy) {
+                    Remove-Item -LiteralPath $openCopy.TempDir -Recurse -Force -ErrorAction SilentlyContinue
                 }
             }
         }
