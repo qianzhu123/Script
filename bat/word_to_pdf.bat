@@ -103,10 +103,7 @@ function Test-WordAvailable {
 }
 
 function Convert-WithWord {
-    param(
-        [System.IO.FileInfo[]]$Files,
-        [string]$TargetDir
-    )
+    param([System.IO.FileInfo[]]$Files)
 
     $word = $null
     try {
@@ -115,8 +112,9 @@ function Convert-WithWord {
         $word.DisplayAlerts = 0
 
         foreach ($file in $Files) {
-            $pdfPath = Join-Path $TargetDir ($file.BaseName + ".pdf")
+            $pdfPath = Join-Path $file.DirectoryName ($file.BaseName + ".pdf")
             Write-Info "Converting with Microsoft Word: $($file.FullName)"
+            Remove-Item -LiteralPath $pdfPath -Force -ErrorAction SilentlyContinue
 
             $document = $null
             try {
@@ -150,22 +148,23 @@ function Convert-WithWord {
 function Convert-WithSoffice {
     param(
         [System.IO.FileInfo[]]$Files,
-        [string]$TargetDir,
         [string]$SofficePath
     )
 
     foreach ($file in $Files) {
         Write-Info "Converting with LibreOffice/OpenOffice: $($file.FullName)"
+        $targetDir = $file.DirectoryName
+        $pdfPath = Join-Path $targetDir ($file.BaseName + ".pdf")
+        Remove-Item -LiteralPath $pdfPath -Force -ErrorAction SilentlyContinue
         $arguments = @(
             "--headless",
             "--convert-to", "pdf",
-            "--outdir", $TargetDir,
+            "--outdir", $targetDir,
             $file.FullName
         )
 
         $process = Start-Process -FilePath $SofficePath -ArgumentList $arguments -Wait -PassThru -NoNewWindow
         if ($process.ExitCode -eq 0) {
-            $pdfPath = Join-Path $TargetDir ($file.BaseName + ".pdf")
             Write-Ok "Saved: $pdfPath"
         }
         else {
@@ -175,65 +174,45 @@ function Convert-WithSoffice {
 }
 
 $InputPath = $env:WORD2PDF_INPUT
-$OutputDir = $env:WORD2PDF_OUTPUT
-$Recurse = $env:WORD2PDF_RECURSE -eq "1"
 
 if ([string]::IsNullOrWhiteSpace($InputPath)) {
-    throw "Input path is required."
+    throw "Folder path is required."
 }
 
 if (-not (Test-Path -LiteralPath $InputPath)) {
-    throw "Input path does not exist: $InputPath"
+    throw "Folder does not exist: $InputPath"
 }
 
 $resolvedInputPath = Resolve-FullPath $InputPath
-$supportedExtensions = @(".doc", ".docx", ".docm", ".rtf", ".odt")
-$files = @()
-
 $item = Get-Item -LiteralPath $resolvedInputPath
-if ($item.PSIsContainer) {
-    $searchOption = if ($Recurse) { "AllDirectories" } else { "TopDirectoryOnly" }
-    $files = [System.IO.Directory]::EnumerateFiles($item.FullName, "*.*", $searchOption) |
-        Where-Object { $supportedExtensions -contains ([System.IO.Path]::GetExtension($_).ToLowerInvariant()) } |
-        ForEach-Object { Get-Item -LiteralPath $_ }
-
-    if ([string]::IsNullOrWhiteSpace($OutputDir)) {
-        $OutputDir = Join-Path $item.FullName "pdf_output"
-    }
+if (-not $item.PSIsContainer) {
+    throw "A folder path is required. Received: $resolvedInputPath"
 }
-else {
-    if (-not ($supportedExtensions -contains $item.Extension.ToLowerInvariant())) {
-        throw "Unsupported file type: $($item.Extension)"
-    }
-    $files = @($item)
 
-    if ([string]::IsNullOrWhiteSpace($OutputDir)) {
-        $OutputDir = $item.DirectoryName
-    }
-}
+$supportedExtensions = @(".doc", ".docx", ".docm", ".rtf", ".odt")
+$files = [System.IO.Directory]::EnumerateFiles(
+    $item.FullName,
+    "*.*",
+    [System.IO.SearchOption]::AllDirectories
+) |
+    Where-Object { $supportedExtensions -contains ([System.IO.Path]::GetExtension($_).ToLowerInvariant()) } |
+    ForEach-Object { Get-Item -LiteralPath $_ }
 
 if (-not $files -or $files.Count -eq 0) {
     throw "No supported Word documents found."
 }
 
-if (-not (Test-Path -LiteralPath $OutputDir)) {
-    Write-Info "Creating output directory: $OutputDir"
-    New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
-}
-
-$resolvedOutputDir = Resolve-FullPath $OutputDir
 Write-Info "Input: $resolvedInputPath"
-Write-Info "Output: $resolvedOutputDir"
 Write-Info "Files: $($files.Count)"
 Write-Host ""
 
 if (Test-WordAvailable) {
-    Convert-WithWord -Files $files -TargetDir $resolvedOutputDir
+    Convert-WithWord -Files $files
 }
 else {
     $sofficePath = Get-SofficePath
     if ($sofficePath) {
-        Convert-WithSoffice -Files $files -TargetDir $resolvedOutputDir -SofficePath $sofficePath
+        Convert-WithSoffice -Files $files -SofficePath $sofficePath
     }
     else {
         throw "No converter found. Please install Microsoft Word or LibreOffice, then try again."
