@@ -23,6 +23,12 @@ Assert-Contains '$files = @($item)' 'A supported file input must become a one-it
 Assert-Contains 'Unsupported file type:' 'Unsupported file input must report its extension.'
 Assert-Contains '$file.DirectoryName' 'Output paths must use each source file directory.'
 Assert-Contains 'Remove-Item -LiteralPath $pdfPath -Force' 'An existing same-name PDF must be replaced explicitly.'
+Assert-Contains '-Stream Zone.Identifier' 'Downloaded documents must be detected by their security stream.'
+Assert-Contains 'Copy-Item -LiteralPath $File.FullName' 'A downloaded source must be copied before unblocking.'
+Assert-Contains 'Unblock-File -LiteralPath $tempPath' 'Only the temporary copy must be unblocked.'
+Assert-NotContains 'Unblock-File -LiteralPath $file.FullName' 'The original source security marker must remain intact.'
+Assert-Contains '$word.Documents.Open($openPath' 'Word must open the selected original or temporary path.'
+Assert-Contains 'Remove-Item -LiteralPath $openCopy.TempDir -Recurse -Force' 'Temporary files must be removed in cleanup.'
 
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('word to pdf 中文 ' + [guid]::NewGuid())
 $inputFile = Join-Path $tempRoot 'input.txt'
