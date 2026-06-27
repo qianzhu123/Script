@@ -1,0 +1,22 @@
+{
+  "groups": [
+    {
+      "id": "examples",
+      "name": "Examples",
+      "order": 1
+    }
+  ],
+  "scripts": [
+    {
+      "id": "demo-ps1",
+      "name": "Demo PowerShell Script",
+      "groupId": "examples",
+      "path": "ps1/demo.ps1",
+      "description": "Prints a short message from a PowerShell script.",
+      "priority": "low",
+      "shell": "powershell",
+      "ports": [],
+      "order": 1
+    }
+  ]
+}

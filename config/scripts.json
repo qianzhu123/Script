@@ -1,0 +1,730 @@
+{
+  "groups": [
+    {
+      "id": "常用",
+      "name": "常用",
+      "order": 1
+    },
+    {
+      "id": "group-mq8b1r2n-6set70",
+      "name": "本地服务",
+      "order": 2
+    },
+    {
+      "id": "开发工具",
+      "name": "开发工具",
+      "order": 6
+    },
+    {
+      "id": "安卓逆向",
+      "name": "逆向",
+      "order": 7
+    },
+    {
+      "id": "文件处理",
+      "name": "文件处理",
+      "order": 5
+    },
+    {
+      "id": "端口与服务",
+      "name": "端口与服务",
+      "order": 9
+    },
+    {
+      "id": "磁盘清理",
+      "name": "磁盘清理",
+      "order": 10
+    },
+    {
+      "id": "系统维护",
+      "name": "系统维护",
+      "order": 11
+    },
+    {
+      "id": "网络检查",
+      "name": "网络检查",
+      "order": 12
+    },
+    {
+      "id": "group-mq8bcb2k-ih45b6",
+      "name": "代理",
+      "order": 13
+    },
+    {
+      "id": "group-mq9a888i",
+      "name": "自动化",
+      "order": 8
+    },
+    {
+      "id": "group-mq9j08xp",
+      "name": "一些数据",
+      "order": 14
+    },
+    {
+      "id": "skill",
+      "name": "skill",
+      "order": 3
+    },
+    {
+      "id": "group-mqtiytuf",
+      "name": "视频处理",
+      "order": 4
+    },
+    {
+      "id": "group-image",
+      "name": "图片处理",
+      "order": 15
+    }
+  ],
+  "scripts": [
+    {
+      "id": "bat-create-startmenu-shortcut-bat",
+      "name": "创建开始菜单快捷方式",
+      "groupId": "常用",
+      "path": "bat/Create-StartMenu-Shortcut.bat",
+      "description": "复制快捷方式到开始菜单",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 2
+    },
+    {
+      "id": "bat-scripttoexe-bat",
+      "name": "脚本转EXE",
+      "groupId": "常用",
+      "path": "bat/ScriptToExe.bat",
+      "description": "脚本转exe",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 1
+    },
+    {
+      "id": "bat-nginxstart-bat",
+      "name": "启动Nginx",
+      "groupId": "端口与服务",
+      "path": "bat/nginxStart.bat",
+      "description": "设置项目访问地址",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 3
+    },
+    {
+      "id": "bat-killport-bat",
+      "name": "结束端口进程",
+      "groupId": "端口与服务",
+      "path": "bat/KillPort.bat",
+      "description": "根据端口号查找并结束占用进程",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 4
+    },
+    {
+      "id": "bat-nginxstop-bat",
+      "name": "停止Nginx",
+      "groupId": "端口与服务",
+      "path": "bat/nginxStop.bat",
+      "description": "等待2秒确保进程退出",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 5
+    },
+    {
+      "id": "bat-port_check_kill-bat",
+      "name": "端口检测与清理",
+      "groupId": "端口与服务",
+      "path": "bat/Port_Check_Kill.bat",
+      "description": "交互式端口占用检测与进程清理",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 6
+    },
+    {
+      "id": "bat-start_jadx_mcp_server_http-bat",
+      "name": "启动JADX MCP服务",
+      "groupId": "安卓逆向",
+      "path": "bat/start_jadx_mcp_server_http.bat",
+      "description": "启动JADX反编译MCP服务(HTTP模式)",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 7
+    },
+    {
+      "id": "bat-tunnelshare-pro-bat",
+      "name": "内网穿透",
+      "groupId": "开发工具",
+      "path": "bat/TunnelShare-Pro.bat",
+      "description": "通过Cloudflare隧道暴露本地服务",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 8
+    },
+    {
+      "id": "bat-adb_current_app_info-bat",
+      "name": "ADB当前应用信息",
+      "groupId": "安卓逆向",
+      "path": "bat/adb_current_app_info.bat",
+      "description": "获取设备前台应用的包名/类名/PID/SO信息",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 9
+    },
+    {
+      "id": "bat-apktool_auto_compile_decompile-bat",
+      "name": "APK反编译与签名",
+      "groupId": "安卓逆向",
+      "path": "bat/APKTool_Auto_Compile_Decompile.bat",
+      "description": "APK反编译/回编/签名/清单分析",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 10
+    },
+    {
+      "id": "bat-clear_openwith_cache-bat",
+      "name": "清理打开方式缓存",
+      "groupId": "系统维护",
+      "path": "bat/Clear_OpenWith_Cache.bat",
+      "description": "清理资源管理器打开方式缓存",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 11
+    },
+    {
+      "id": "bat-clone_to_github_dir-bat",
+      "name": "克隆到GitHub目录",
+      "groupId": "开发工具",
+      "path": "bat/clone_to_github_dir.bat",
+      "description": "克隆仓库到指定GitHub目录",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 12
+    },
+    {
+      "id": "bat-file_or_url_to_md-bat",
+      "name": "文件/网址转Markdown",
+      "groupId": "文件处理",
+      "path": "bat/file_or_url_to_md.bat",
+      "description": "将文件或URL内容转为Markdown格式",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 13
+    },
+    {
+      "id": "bat-generate_start_script-bat",
+      "name": "生成启动脚本",
+      "groupId": "常用",
+      "path": "bat/generate_start_script.bat",
+      "description": "自动检测项目类型并生成启动脚本",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 3
+    },
+    {
+      "id": "bat-git_push_helper-bat",
+      "name": "Git推送助手",
+      "groupId": "开发工具",
+      "path": "bat/git_push_helper.bat",
+      "description": "交互式Git提交/推送/拉取工具",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 15
+    },
+    {
+      "id": "bat-scan-clean-all-bat",
+      "name": "磁盘清理(全盘)",
+      "groupId": "磁盘清理",
+      "path": "bat/scan-clean-all.bat",
+      "description": "扫描C盘和D盘可清理项",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 16
+    },
+    {
+      "id": "bat-scan-clean-c-bat",
+      "name": "磁盘清理(C盘)",
+      "groupId": "磁盘清理",
+      "path": "bat/scan-clean-c.bat",
+      "description": "扫描C盘可清理项(快速模式)",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 17
+    },
+    {
+      "id": "script-mq6vt54c-o82owa",
+      "name": "演示脚本",
+      "groupId": "",
+      "path": "bat/demo.bat",
+      "description": "BAT演示脚本",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 18
+    },
+    {
+      "id": "bat-scan-clean-d-bat",
+      "name": "磁盘清理(D盘)",
+      "groupId": "磁盘清理",
+      "path": "bat/scan-clean-d.bat",
+      "description": "扫描D盘可清理项",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 19
+    },
+    {
+      "id": "script-mq6vt54m-11u6k8",
+      "name": "示例脚本",
+      "groupId": "",
+      "path": "bat/example.bat",
+      "description": "BAT示例脚本",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 20
+    },
+    {
+      "id": "script-mq6wwr1g-m68evf",
+      "name": "演示脚本(PS1)",
+      "groupId": "",
+      "path": "ps1/demo.ps1",
+      "description": "PS1演示脚本",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 21
+    },
+    {
+      "id": "bat-update-powershell-bat",
+      "name": "更新PowerShell",
+      "groupId": "系统维护",
+      "path": "bat/Update-PowerShell.bat",
+      "description": "通过winget更新PowerShell版本",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 22
+    },
+    {
+      "id": "script-mq6wwr1h-cbni5n",
+      "name": "示例脚本(PS1)",
+      "groupId": "",
+      "path": "ps1/example.ps1",
+      "description": "PS1示例脚本",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 23
+    },
+    {
+      "id": "script-mq6xf8f4-qq4rrr",
+      "name": "脚本转EXE(PS1)",
+      "groupId": "",
+      "path": "ps1/ScriptToExe.ps1",
+      "description": "PowerShell版脚本转EXE",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 24
+    },
+    {
+      "id": "script-mq6xfbyz-vyhm90",
+      "name": "生成启动脚本(PS1)",
+      "groupId": "",
+      "path": "ps1/generate_start_script.ps1",
+      "description": "PowerShell版启动脚本生成器",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 25
+    },
+    {
+      "id": "bat-url_inspector_extended-bat",
+      "name": "URL安全检测",
+      "groupId": "网络检查",
+      "path": "bat/url_inspector_extended.bat",
+      "description": "URL安全检测(DNS/HTTP/TLS/WHOIS/风险评分)",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 26
+    },
+    {
+      "id": "script-mq7vyy4j-2nl0x9",
+      "name": "图片格式转换(旧)",
+      "groupId": "",
+      "path": "bat/convert-image.bat",
+      "description": "图片格式转换(需ImageMagick)",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 27
+    },
+    {
+      "id": "bat--bat",
+      "name": "启动代理池",
+      "groupId": "",
+      "path": "bat/启动代理池.bat",
+      "description": "启动代理池服务",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 28
+    },
+    {
+      "id": "script-mq8afrzr-ntn2t5",
+      "name": "图片格式转换",
+      "groupId": "常用",
+      "path": "bat/convert-image.bat",
+      "description": "图片格式转换",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 4
+    },
+    {
+      "id": "script-mq8ahdkv-rd3ouq",
+      "name": "磁盘扫描报告",
+      "groupId": "",
+      "path": "ps1/Scan-CleanReport.ps1",
+      "description": "磁盘空间扫描与分类报告(英文版)",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 30
+    },
+    {
+      "id": "script-mq8ahfbw-1nlpzy",
+      "name": "磁盘扫描报告(中文)",
+      "groupId": "",
+      "path": "ps1/scan_clean_report.ps1",
+      "description": "磁盘空间扫描与分类报告(中文版)",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 31
+    },
+    {
+      "id": "script-mq7vyy4l-nk0mis",
+      "name": "图片格式转换(PS1)",
+      "groupId": "",
+      "path": "ps1/Convert-Image.ps1",
+      "description": "PowerShell版图片格式转换",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 32
+    },
+    {
+      "id": "script-mq8aj4ws-kptqny",
+      "name": "微信小程序hook脚本",
+      "groupId": "安卓逆向",
+      "path": "bat/微信小程序hook脚本",
+      "description": "微信小程序逆向Hook脚本",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 33
+    },
+    {
+      "id": "script-mq8b367y-taidte",
+      "name": "AI量化交易",
+      "groupId": "group-mq8b1r2n-6set70",
+      "path": "D:\\tools\\Productivity\\AI_Tools\\Vibe-Trading\\start.bat",
+      "description": "AI量化交易",
+      "priority": "normal",
+      "shell": "",
+      "ports": [
+        8899
+      ],
+      "order": 1
+    },
+    {
+      "id": "script-mq8cde1w-3hhexi",
+      "name": "代理代码生成器",
+      "groupId": "group-mq8bcb2k-ih45b6",
+      "path": "D:\\code\\python\\utils\\proxy\\代理代码生成器.bat",
+      "description": "生成代理代码",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 35
+    },
+    {
+      "id": "script-mq92rz8d-s6ug8l",
+      "name": "快速获取代理",
+      "groupId": "group-mq8bcb2k-ih45b6",
+      "path": "D:\\code\\python\\utils\\proxy\\快速获取代理.bat",
+      "description": "快速获取可用代理",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 36
+    },
+    {
+      "id": "script-mq92s85c-9ujz4e",
+      "name": "压力测试代理",
+      "groupId": "group-mq8bcb2k-ih45b6",
+      "path": "D:\\code\\python\\utils\\proxy\\压力测试代理.bat",
+      "description": "对代理进行压力测试",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 37
+    },
+    {
+      "id": "run_exam_check",
+      "name": "查询考试信息",
+      "groupId": "group-mq9a888i",
+      "path": "D:\\code\\python\\utils\\exam-check\\run_exam_check.bat",
+      "description": "查询考试信息",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 1
+    },
+    {
+      "id": "start_python",
+      "name": "身份证校验码",
+      "groupId": "group-mq9j08xp",
+      "path": "D:\\code\\python\\utils\\IdCard-18\\start_python.bat",
+      "description": "计算身份证号第18位",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 39
+    },
+    {
+      "id": "start_python-mq9j2c17",
+      "name": "身份证前六位",
+      "groupId": "group-mq9j08xp",
+      "path": "D:\\code\\python\\utils\\IdCard-pre-six\\start_python.bat",
+      "description": "身份证号前6位数",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 40
+    },
+    {
+      "id": "start_python-mq9mz87x",
+      "name": "手机号归属",
+      "groupId": "group-mq9j08xp",
+      "path": "D:\\code\\python\\utils\\phone-pre-seven\\start_python.bat",
+      "description": "手机号前七位数字",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 41
+    },
+    {
+      "id": "start_python-mq9qsnjd",
+      "name": "QQ与手机号",
+      "groupId": "group-mq9j08xp",
+      "path": "D:\\code\\python\\utils\\qq-phone\\start_python.bat",
+      "description": "qq与手机号",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 42
+    },
+    {
+      "id": "start",
+      "name": "查询成绩",
+      "groupId": "group-mq9a888i",
+      "path": "D:\\code\\python\\utils\\score-check\\start.bat",
+      "description": "查询成绩信息",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 2
+    },
+    {
+      "id": "install-impeccable-skill",
+      "name": "安装前端设计Skill",
+      "groupId": "skill",
+      "path": "bat/install-impeccable-skill.bat",
+      "description": "前端设计指导skill",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 1
+    },
+    {
+      "id": "install-tasteskill",
+      "name": "安装UI框架Skill",
+      "groupId": "skill",
+      "path": "bat/Install-TasteSkill.bat",
+      "description": "UI框架",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 2
+    },
+    {
+      "id": "start-mqdejcxe",
+      "name": "WireMock服务",
+      "description": "启动WireMock模拟服务",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 2
+    },
+    {
+      "id": "install-remotion",
+      "name": "安装Remotion",
+      "groupId": "skill",
+      "path": "bat/install-remotion.bat",
+      "description": "Node.js / React 视频生成框架",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 3
+    },
+    {
+      "id": "install-hyperframes",
+      "name": "安装HyperFrames",
+      "groupId": "skill",
+      "path": "bat/install-hyperframes.bat",
+      "description": "HTML视频框架安装与项目初始化",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 4
+    },
+    {
+      "id": "install-cloakbrowser-ai-rules",
+      "name": "安装指纹浏览器规则",
+      "groupId": "skill",
+      "path": "bat/install-cloakbrowser-ai-rules.bat",
+      "description": "规范代码使用指纹浏览器",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 48
+    },
+    {
+      "id": "start-mqfiid2a",
+      "name": "截图转代码",
+      "groupId": "group-mq8b1r2n-6set70",
+      "path": "D:\\tools\\Dev\\Tools\\screenshot-to-code\\start.bat",
+      "description": "截图转代码",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 49
+    },
+    {
+      "id": "bat-browser_auto-bat",
+      "name": "网页自动化生成器",
+      "groupId": "group-mq9a888i",
+      "path": "bat/browser_auto.bat",
+      "description": "生成网页自动化脚本",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 51
+    },
+    {
+      "id": "ps1-video-speed-export-ps1",
+      "name": "视频倍速导出",
+      "groupId": "group-mqtiytuf",
+      "path": "bat/VideoSpeedExport.bat",
+      "description": "视频倍速处理",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 52
+    },
+    {
+      "id": "bat-replace_word_page-bat",
+      "name": "替换Word页面",
+      "groupId": "文件处理",
+      "path": "bat/replace_word_page.bat",
+      "description": "将一个 Word 文档的指定页替换到另一个 Word 文档的指定页",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 53
+    },
+    {
+      "id": "bat-ffmpeg_convert-bat",
+      "name": "视频格式转换",
+      "groupId": "group-mqtiytuf",
+      "path": "bat/ffmpeg_convert.bat",
+      "description": "FFmpeg 视频/音频格式转换，输出同目录加 _replaced 不覆盖",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 54
+    },
+    {
+      "id": "bat-ffmpeg_resize-bat",
+      "name": "视频调整分辨率",
+      "groupId": "group-mqtiytuf",
+      "path": "bat/ffmpeg_resize.bat",
+      "description": "FFmpeg 调整视频分辨率，输出同目录加 _replaced 不覆盖",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 55
+    },
+    {
+      "id": "bat-ffmpeg_rate-bat",
+      "name": "视频调整帧率码率",
+      "groupId": "group-mqtiytuf",
+      "path": "bat/ffmpeg_rate.bat",
+      "description": "FFmpeg 调整帧率与码率，输出同目录加 _replaced 不覆盖",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 56
+    },
+    {
+      "id": "bat-ffmpeg_audio-bat",
+      "name": "音频处理",
+      "groupId": "group-mqtiytuf",
+      "path": "bat/ffmpeg_audio.bat",
+      "description": "FFmpeg 音频处理(提取/音量/变速/转格式)，输出同目录加 _replaced 不覆盖",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 57
+    },
+    {
+      "id": "ps1-ffmpeg_image-ps1",
+      "name": "图片处理",
+      "groupId": "group-image",
+      "path": "bat/ffmpeg_image.bat",
+      "description": "FFmpeg 图片处理(分辨率/锐度/压缩质量)，输出同目录加 _replaced 不覆盖",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 58
+    },
+    {
+      "id": "install-animejs",
+      "name": "安装Anime.js",
+      "groupId": "skill",
+      "path": "bat/install-animejs.bat",
+      "description": "在指定项目中安装 animejs 动画库（npm install animejs）",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 59
+    }
+  ]
+}

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Script Studio</title>
   <link rel="icon" href="/favicon.svg" />
-  <link rel="stylesheet" href="/style.css?v=20260623" />
+  <link rel="stylesheet" href="/style.css?v=20260627" />
 </head>
 <body>
   <main id="layoutRoot" class="layout">
@@ -23,6 +23,11 @@
     <section class="scripts-panel">
       <div class="panel-header">
         <h1 id="listTitle">全部脚本</h1>
+        <label class="script-search">
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <input id="scriptSearchInput" type="search" placeholder="搜索名称、说明、路径或分组" autocomplete="off" />
+          <span id="scriptSearchCount" class="search-count">0 / 0</span>
+        </label>
         <button id="addScriptBtn" class="secondary-btn">新增脚本</button>
       </div>
       <div id="scriptList" class="script-list"></div>
@@ -47,7 +52,10 @@
       <div id="runTabs" class="terminal-tabs run-tabs"></div>
 
       <!-- 终端输出区（每个 tab 共用，切换时替换内容） -->
-      <div id="terminal" class="terminal" aria-label="操作输出">选择左侧脚本后，点击「运行」执行，或点击「文件夹」在资源管理器中打开。</div>
+      <div class="terminal-wrap">
+        <div id="terminal" class="terminal" aria-label="操作输出">选择左侧脚本后，点击「运行」执行，或点击「文件夹」在资源管理器中打开。</div>
+        <button id="copyOutputBtn" class="terminal-copy-btn" type="button" title="复制运行结果" aria-label="复制运行结果" disabled>⧉</button>
+      </div>
 
       <!-- 底部 stdin 输入框 -->
       <div class="stdin-row">
@@ -84,6 +92,8 @@
     </form>
   </dialog>
 
-  <script src="/app.js?v=20260623"></script>
+  <script src="/terminal-copy.js?v=20260627"></script>
+  <script src="/script-search.js?v=20260627"></script>
+  <script src="/app.js?v=20260627"></script>
 </body>
 </html>

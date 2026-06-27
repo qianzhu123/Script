@@ -7,11 +7,46 @@ const state = {
   // sessions: Map<tabId, { scriptId, scriptName, ws, wsToken, output }>
   sessions: new Map(),
   activeTabId: null,
-  tabCounter: 0
+  tabCounter: 0,
+  searchQuery: '',
+  searchResults: [],
+  searchIndex: -1
 };
 
 const $ = (id) => document.getElementById(id);
 const sorted = (items) => [...items].sort((a, b) => (a.order || 0) - (b.order || 0));
+let copyFeedbackTimer = null;
+
+function activeSessionOutput() {
+  return state.sessions.get(state.activeTabId)?.output || '';
+}
+
+function syncCopyOutputButton(status = 'idle') {
+  const button = $('copyOutputBtn');
+  const presentation = window.TerminalCopy.copyButtonPresentation(activeSessionOutput(), status);
+  button.textContent = presentation.symbol;
+  button.title = presentation.label;
+  button.setAttribute('aria-label', presentation.label);
+  button.disabled = presentation.disabled;
+  button.dataset.status = presentation.status;
+}
+
+async function copyActiveOutput() {
+  const output = activeSessionOutput();
+  if (!output) {
+    syncCopyOutputButton();
+    return;
+  }
+
+  clearTimeout(copyFeedbackTimer);
+  try {
+    await window.TerminalCopy.copyText(output, window);
+    syncCopyOutputButton('success');
+  } catch {
+    syncCopyOutputButton('failure');
+  }
+  copyFeedbackTimer = setTimeout(() => syncCopyOutputButton(), 1400);
+}
 
 async function api(url, options = {}) {
   const response = await fetch(url, {
@@ -40,7 +75,7 @@ function basename(filePath) {
 
 function displayScriptNameFromPath(filePath) {
   const fileName = basename(stripOuterQuotes(filePath)).replace(/\.lnk$/i, '');
-  return fileName.replace(/\.(bat|cmd|ps1|js|vbs|wsf|py)$/i, '');
+  return fileName.replace(/\.(bat|cmd|ps1|js|vbs|wsf|py)$/i, '') || 'script';
 }
 
 function stripOuterQuotes(value) {
@@ -256,6 +291,7 @@ function appendToActiveTab(text) {
   const el = $('terminal');
   el.textContent += text;
   el.scrollTop = el.scrollHeight;
+  syncCopyOutputButton();
 }
 
 function setActiveTabText(text) {
@@ -264,12 +300,14 @@ function setActiveTabText(text) {
   const el = $('terminal');
   el.textContent = text;
   el.scrollTop = el.scrollHeight;
+  syncCopyOutputButton();
 }
 
 function mergeTerminalOutput(output, text) {
   let result = String(output || '');
-  for (const char of String(text || '')) {
-    if (char === '\r') {
+  const normalizedText = String(text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  for (const char of normalizedText) {
+    if (char === '\x0b') {
       const lastNewline = result.lastIndexOf('\n');
       result = lastNewline >= 0 ? result.slice(0, lastNewline + 1) : '';
     } else {
@@ -283,6 +321,7 @@ function renderTerminalOutput(session) {
   const el = $('terminal');
   el.textContent = session?.output || '';
   el.scrollTop = el.scrollHeight;
+  syncCopyOutputButton();
 }
 
 function appendTerminalData(tabId, session, text) {
@@ -296,6 +335,7 @@ async function loadConfig() {
   if (state.selectedScript) {
     state.selectedScript = state.config.scripts.find((s) => s.id === state.selectedScript.id) || null;
   }
+  if (isSearchActive()) refreshSearchResults();
   renderGroups();
   renderScripts();
   renderSelected();
@@ -303,14 +343,112 @@ async function loadConfig() {
 
 function currentScripts() {
   const scripts = sorted(state.config.scripts || []);
+  if (window.ScriptSearch.normalizeSearchQuery(state.searchQuery)) {
+    return window.ScriptSearch.findMatchingScripts(scripts, state.config.groups || [], state.searchQuery);
+  }
   return state.currentGroup === 'all'
     ? scripts
     : scripts.filter((s) => s.groupId === state.currentGroup);
 }
 
 function currentGroupName() {
+  if (window.ScriptSearch.normalizeSearchQuery(state.searchQuery)) return '全部脚本';
   if (state.currentGroup === 'all') return '全部脚本';
   return state.config.groups.find((g) => g.id === state.currentGroup)?.name || '全部脚本';
+}
+
+function isSearchActive() {
+  return Boolean(window.ScriptSearch.normalizeSearchQuery(state.searchQuery));
+}
+
+function searchGroupName(script) {
+  return window.ScriptSearch.groupNameFor(state.config.groups || [], script.groupId) || '未分组';
+}
+
+function syncSearchCounter() {
+  const total = state.searchResults.length;
+  const current = total && state.searchIndex >= 0 ? state.searchIndex + 1 : 0;
+  $('scriptSearchCount').textContent = `${current} / ${total}`;
+}
+
+function clearSearch() {
+  state.searchQuery = '';
+  state.searchResults = [];
+  state.searchIndex = -1;
+  $('scriptSearchInput').value = '';
+  syncSearchCounter();
+}
+
+function selectSearchResult(index, scroll = true) {
+  const total = state.searchResults.length;
+  if (!total) {
+    state.searchIndex = -1;
+    state.selectedScript = null;
+    $('selectedTitle').textContent = '未选择脚本';
+    syncSearchCounter();
+    renderSelected();
+    return;
+  }
+
+  state.searchIndex = ((index % total) + total) % total;
+  state.selectedScript = state.searchResults[state.searchIndex];
+  $('selectedTitle').textContent = state.selectedScript.name;
+  syncSearchCounter();
+  renderSelected();
+
+  if (scroll) {
+    requestAnimationFrame(() => {
+      const card = document.querySelector(`.script-card[data-id="${CSS.escape(state.selectedScript.id)}"]`);
+      card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }
+}
+
+function refreshSearchResults({ resetIndex = false } = {}) {
+  const query = window.ScriptSearch.normalizeSearchQuery(state.searchQuery);
+  if (!query) {
+    state.searchResults = [];
+    state.searchIndex = -1;
+    syncSearchCounter();
+    return;
+  }
+
+  state.currentGroup = 'all';
+  state.searchResults = window.ScriptSearch.findMatchingScripts(
+    sorted(state.config.scripts || []),
+    state.config.groups || [],
+    query
+  );
+  if (resetIndex || state.searchIndex < 0 || state.searchIndex >= state.searchResults.length) {
+    state.searchIndex = state.searchResults.length ? 0 : -1;
+  }
+}
+
+function handleSearchInput(event) {
+  state.searchQuery = event.target.value;
+  refreshSearchResults({ resetIndex: true });
+  renderGroups();
+  renderScripts();
+  selectSearchResult(state.searchIndex);
+}
+
+function handleSearchKeydown(event) {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    clearSearch();
+    renderGroups();
+    renderScripts();
+    return;
+  }
+  if (event.key !== 'Enter' || !isSearchActive()) return;
+  event.preventDefault();
+  state.searchIndex = window.ScriptSearch.nextSearchIndex(
+    state.searchIndex,
+    state.searchResults.length,
+    event.shiftKey ? -1 : 1
+  );
+  renderScripts();
+  selectSearchResult(state.searchIndex);
 }
 
 // ── 拖拽排序 ──────────────────────────────────────────────
@@ -367,6 +505,7 @@ function renderGroups() {
   all.className = `group-item ${state.currentGroup === 'all' ? 'active' : ''}`;
   all.textContent = '全部脚本';
   all.onclick = () => {
+    clearSearch();
     state.currentGroup = 'all';
     renderGroups();
     renderScripts();
@@ -387,6 +526,7 @@ function renderGroups() {
     button.className = 'group-name';
     button.textContent = group.name;
     button.onclick = () => {
+      clearSearch();
       state.currentGroup = group.id;
       renderGroups();
       renderScripts();
@@ -426,30 +566,46 @@ function renderScripts() {
   const list = $('scriptList');
   list.innerHTML = '';
   const scripts = currentScripts();
+  const searching = isSearchActive();
+  if (searching) {
+    state.searchResults = scripts;
+    syncSearchCounter();
+  } else {
+    $('scriptSearchCount').textContent = '0 / 0';
+  }
 
   if (!scripts.length) {
-    list.innerHTML = '<div class="empty">没有脚本。点击「新增脚本」添加一个本地 BAT、CMD 或 PowerShell 脚本。</div>';
+    list.innerHTML = searching
+      ? '<div class="empty">没有找到匹配脚本。</div>'
+      : '<div class="empty">没有脚本。点击「新增脚本」添加一个本地 BAT、CMD 或 PowerShell 脚本。</div>';
     return;
   }
 
-  scripts.forEach((script) => {
+  scripts.forEach((script, index) => {
     const card = document.createElement('article');
-    card.className = `script-card ${state.selectedScript?.id === script.id ? 'selected' : ''}`;
+    const activeSearchResult = searching && index === state.searchIndex;
+    card.className = `script-card ${state.selectedScript?.id === script.id ? 'selected' : ''} ${searching ? 'search-match' : ''} ${activeSearchResult ? 'search-active' : ''}`;
     card.dataset.id = script.id;
-    card.draggable = true;
-    card.addEventListener('dragstart', (event) => startListDrag(event, 'script', script.id));
-    card.addEventListener('dragover', (event) => moveListDrag(event, list, '.script-card'));
-    card.addEventListener('drop', (event) => finishScriptDrag(event, list));
-    card.addEventListener('dragend', clearListDrag);
+    card.draggable = !searching;
+    if (!searching) {
+      card.addEventListener('dragstart', (event) => startListDrag(event, 'script', script.id));
+      card.addEventListener('dragover', (event) => moveListDrag(event, list, '.script-card'));
+      card.addEventListener('drop', (event) => finishScriptDrag(event, list));
+      card.addEventListener('dragend', clearListDrag);
+    }
 
     const description = script.description
-      ? `<p class="description">${escapeHtml(script.description)}</p>`
+      ? `<p class="description">${searching ? window.ScriptSearch.highlightSearchText(script.description, state.searchQuery) : escapeHtml(script.description)}</p>`
       : '<p class="description muted">暂无说明</p>';
+    const group = searching
+      ? `<p class="search-group">分组：${window.ScriptSearch.highlightSearchText(searchGroupName(script), state.searchQuery)}</p>`
+      : '';
 
     card.innerHTML = `
       <div class="script-info">
-        <h2>${escapeHtml(script.name)}</h2>
-        <p class="path">${escapeHtml(script.path)}</p>
+        <h2>${searching ? window.ScriptSearch.highlightSearchText(script.name, state.searchQuery) : escapeHtml(script.name)}</h2>
+        <p class="path">${searching ? window.ScriptSearch.highlightSearchText(script.path, state.searchQuery) : escapeHtml(script.path)}</p>
+        ${group}
         ${description}
       </div>
       <div class="card-actions">
@@ -462,9 +618,11 @@ function renderScripts() {
       if (action === 'edit') return openScriptDialog(script);
       if (action === 'delete') return deleteScript(script);
       state.selectedScript = script;
+      if (searching) state.searchIndex = index;
       $('selectedTitle').textContent = script.name;
       renderScripts();
       renderSelected();
+      syncSearchCounter();
     };
 
     list.appendChild(card);
@@ -480,6 +638,7 @@ function renderSelected() {
   // 停止按钮：当前活跃 tab 是否有运行中的 ws
   const activeSession = state.sessions.get(state.activeTabId);
   $('stopBtn').disabled = !activeSession?.ws;
+  syncCopyOutputButton();
 }
 
 // ── 运行脚本（WebSocket，每次新建一个 tab）────────────────
@@ -501,6 +660,7 @@ function runSelected() {
   renderRunTabs();
   $('terminal').textContent = session.output;
   $('terminal').scrollTop = 0;
+  syncCopyOutputButton();
   $('stdinInput').disabled = true;
   $('selectedTitle').textContent = script.name;
 
@@ -611,6 +771,7 @@ async function exploreSelected() {
     el.scrollTop = el.scrollHeight;
     const session = state.sessions.get(state.activeTabId);
     if (session) session.output += msg;
+    syncCopyOutputButton();
   }
 }
 
@@ -627,9 +788,8 @@ function setupStdinInput() {
       session.ws.send(JSON.stringify({ type: 'input', data: text + '\n' }));
       // 回显输入
       const echo = `> ${text}\n`;
-      session.output += echo;
-      $('terminal').textContent = session.output;
-      $('terminal').scrollTop = $('terminal').scrollHeight;
+      session.output = mergeTerminalOutput(session.output, echo);
+      renderTerminalOutput(session);
     } catch {}
   });
 }
@@ -669,9 +829,10 @@ function openScriptDialog(script = null) {
 async function saveScript(event) {
   event.preventDefault();
   const id = $('scriptId').value;
+  const cleanedPath = cleanScriptPathInput();
   const body = {
-    name: $('scriptName').value,
-    path: cleanScriptPathInput(),
+    name: $('scriptName').value.trim() || displayScriptNameFromPath(cleanedPath),
+    path: cleanedPath,
     groupId: $('scriptGroup').value,
     description: $('scriptDescription').value,
     ports: $('scriptPorts').value
@@ -756,10 +917,14 @@ $('scriptForm').onsubmit = saveScript;
 $('runBtn').onclick = runSelected;
 $('exploreBtn').onclick = exploreSelected;
 $('stopBtn').onclick = stopSelected;
+$('copyOutputBtn').onclick = copyActiveOutput;
+$('scriptSearchInput').oninput = handleSearchInput;
+$('scriptSearchInput').onkeydown = handleSearchKeydown;
 setupScriptPathAutoClean();
 
 setupStdinInput();
 setupPanelResizers();
+syncCopyOutputButton();
 
 loadConfig().catch((error) => {
   $('scriptList').innerHTML = `<div class="empty">加载失败：${escapeHtml(error.message)}</div>`;

@@ -1,52 +1,23 @@
-@echo off
-chcp 65001 >nul
-setlocal
-
-REM Word to PDF Converter - single BAT script for web service.
-REM The PowerShell payload is embedded below, so only this BAT file needs to be registered.
-
-echo ========================================
-echo Word to PDF Converter
-echo ========================================
-echo.
-echo Usage:
-echo   Enter a Word file or a folder containing Word documents.
-echo   Folder input includes all subfolders automatically.
-echo   Each PDF is saved beside its source document.
-echo.
-
-set "INPUT_PATH="
-set /p "INPUT_PATH=Enter Word file or folder path: "
-
-if not defined INPUT_PATH (
-    echo [ERROR] File or folder path is required.
-    echo.
-    pause
-    exit /b 1
-)
-
-REM Paths copied from Explorer or terminals are often wrapped in double quotes.
-REM Double quotes cannot be part of a Windows file name, so remove them here.
-set "INPUT_PATH=%INPUT_PATH:"=%"
-
-set "WORD2PDF_INPUT=%INPUT_PATH%"
-
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$lines=Get-Content -LiteralPath '%~f0' -Encoding UTF8; $idx=[Array]::IndexOf($lines,'# POWERSHELL_PAYLOAD'); if($idx -lt 0){throw 'PowerShell payload not found.'}; $code=($lines[($idx+1)..($lines.Count-1)] -join [Environment]::NewLine); $script=[scriptblock]::Create($code); & $script"
-
-set "EXIT_CODE=%ERRORLEVEL%"
-echo.
-if not "%EXIT_CODE%"=="0" (
-    echo [ERROR] Conversion failed. Exit code: %EXIT_CODE%
-) else (
-    echo [OK] Done.
-)
-
-endlocal
-pause
-exit /b %EXIT_CODE%
-
-# POWERSHELL_PAYLOAD
 $ErrorActionPreference = "Stop"
+
+<#
+.SYNOPSIS
+Convert Word documents to PDF.
+
+.DESCRIPTION
+Supports converting a single Word document or all Word documents in a directory.
+Preferred converter order:
+1. Microsoft Word COM automation, if Microsoft Word is installed.
+2. LibreOffice / OpenOffice command line, if soffice.exe is available in PATH or common install paths.
+
+Supported input extensions: .doc, .docx, .docm, .rtf, .odt
+#>
+
+param(
+    [string]$InputPath = "",
+    [string]$OutputDir = "",
+    [switch]$Recurse
+)
 
 function Write-Info {
     param([string]$Message)
@@ -102,34 +73,11 @@ function Test-WordAvailable {
     }
 }
 
-function New-UnblockedWordCopy {
-    param([System.IO.FileInfo]$File)
-
-    $zoneStream = Get-Item -LiteralPath $File.FullName -Stream Zone.Identifier -ErrorAction SilentlyContinue
-    if (-not $zoneStream) {
-        return $null
-    }
-
-    $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ("word_to_pdf_" + [guid]::NewGuid().ToString("N"))
-    try {
-        New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
-        $tempPath = Join-Path $tempDir $File.Name
-        Copy-Item -LiteralPath $File.FullName -Destination $tempPath -Force
-        Unblock-File -LiteralPath $tempPath
-        Write-Info "Using a safe temporary copy for downloaded document: $($File.FullName)"
-        return [pscustomobject]@{
-            Path = $tempPath
-            TempDir = $tempDir
-        }
-    }
-    catch {
-        Remove-Item -LiteralPath $tempDir -Recurse -Force -ErrorAction SilentlyContinue
-        throw
-    }
-}
-
 function Convert-WithWord {
-    param([System.IO.FileInfo[]]$Files)
+    param(
+        [System.IO.FileInfo[]]$Files,
+        [string]$TargetDir
+    )
 
     $word = $null
     try {
@@ -138,16 +86,12 @@ function Convert-WithWord {
         $word.DisplayAlerts = 0
 
         foreach ($file in $Files) {
-            $pdfPath = Join-Path $file.DirectoryName ($file.BaseName + ".pdf")
+            $pdfPath = Join-Path $TargetDir ($file.BaseName + ".pdf")
             Write-Info "Converting with Microsoft Word: $($file.FullName)"
-            Remove-Item -LiteralPath $pdfPath -Force -ErrorAction SilentlyContinue
 
             $document = $null
-            $openCopy = $null
             try {
-                $openCopy = New-UnblockedWordCopy -File $file
-                $openPath = if ($openCopy) { $openCopy.Path } else { $file.FullName }
-                $document = $word.Documents.Open($openPath, $false, $true)
+                $document = $word.Documents.Open($file.FullName, $false, $true)
                 # 17 = wdExportFormatPDF
                 $document.ExportAsFixedFormat($pdfPath, 17)
                 Write-Ok "Saved: $pdfPath"
@@ -160,9 +104,6 @@ function Convert-WithWord {
                 if ($document) {
                     $document.Close($false)
                     [System.Runtime.InteropServices.Marshal]::ReleaseComObject($document) | Out-Null
-                }
-                if ($openCopy) {
-                    Remove-Item -LiteralPath $openCopy.TempDir -Recurse -Force -ErrorAction SilentlyContinue
                 }
             }
         }
@@ -180,23 +121,22 @@ function Convert-WithWord {
 function Convert-WithSoffice {
     param(
         [System.IO.FileInfo[]]$Files,
+        [string]$TargetDir,
         [string]$SofficePath
     )
 
     foreach ($file in $Files) {
         Write-Info "Converting with LibreOffice/OpenOffice: $($file.FullName)"
-        $targetDir = $file.DirectoryName
-        $pdfPath = Join-Path $targetDir ($file.BaseName + ".pdf")
-        Remove-Item -LiteralPath $pdfPath -Force -ErrorAction SilentlyContinue
         $arguments = @(
             "--headless",
             "--convert-to", "pdf",
-            "--outdir", $targetDir,
+            "--outdir", $TargetDir,
             $file.FullName
         )
 
         $process = Start-Process -FilePath $SofficePath -ArgumentList $arguments -Wait -PassThru -NoNewWindow
         if ($process.ExitCode -eq 0) {
+            $pdfPath = Join-Path $TargetDir ($file.BaseName + ".pdf")
             Write-Ok "Saved: $pdfPath"
         }
         else {
@@ -205,51 +145,71 @@ function Convert-WithSoffice {
     }
 }
 
-$InputPath = $env:WORD2PDF_INPUT
+Write-Host "========================================"
+Write-Host "Word to PDF Converter"
+Write-Host "========================================"
+Write-Host ""
 
 if ([string]::IsNullOrWhiteSpace($InputPath)) {
-    throw "File or folder path is required."
+    $InputPath = Read-Host "Enter a Word file path or a directory path"
+}
+
+if ([string]::IsNullOrWhiteSpace($InputPath)) {
+    throw "Input path is required."
 }
 
 if (-not (Test-Path -LiteralPath $InputPath)) {
-    throw "File or folder does not exist: $InputPath"
+    throw "Input path does not exist: $InputPath"
 }
 
 $resolvedInputPath = Resolve-FullPath $InputPath
-$item = Get-Item -LiteralPath $resolvedInputPath
 $supportedExtensions = @(".doc", ".docx", ".docm", ".rtf", ".odt")
+$files = @()
 
+$item = Get-Item -LiteralPath $resolvedInputPath
 if ($item.PSIsContainer) {
-    $files = [System.IO.Directory]::EnumerateFiles(
-        $item.FullName,
-        "*.*",
-        [System.IO.SearchOption]::AllDirectories
-    ) |
+    $searchOption = if ($Recurse) { "AllDirectories" } else { "TopDirectoryOnly" }
+    $files = [System.IO.Directory]::EnumerateFiles($item.FullName, "*.*", $searchOption) |
         Where-Object { $supportedExtensions -contains ([System.IO.Path]::GetExtension($_).ToLowerInvariant()) } |
         ForEach-Object { Get-Item -LiteralPath $_ }
+
+    if ([string]::IsNullOrWhiteSpace($OutputDir)) {
+        $OutputDir = Join-Path $item.FullName "pdf_output"
+    }
 }
 else {
     if (-not ($supportedExtensions -contains $item.Extension.ToLowerInvariant())) {
         throw "Unsupported file type: $($item.Extension)"
     }
     $files = @($item)
+
+    if ([string]::IsNullOrWhiteSpace($OutputDir)) {
+        $OutputDir = $item.DirectoryName
+    }
 }
 
 if (-not $files -or $files.Count -eq 0) {
     throw "No supported Word documents found."
 }
 
+if (-not (Test-Path -LiteralPath $OutputDir)) {
+    Write-Info "Creating output directory: $OutputDir"
+    New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
+}
+
+$resolvedOutputDir = Resolve-FullPath $OutputDir
 Write-Info "Input: $resolvedInputPath"
+Write-Info "Output: $resolvedOutputDir"
 Write-Info "Files: $($files.Count)"
 Write-Host ""
 
 if (Test-WordAvailable) {
-    Convert-WithWord -Files $files
+    Convert-WithWord -Files $files -TargetDir $resolvedOutputDir
 }
 else {
     $sofficePath = Get-SofficePath
     if ($sofficePath) {
-        Convert-WithSoffice -Files $files -SofficePath $sofficePath
+        Convert-WithSoffice -Files $files -TargetDir $resolvedOutputDir -SofficePath $sofficePath
     }
     else {
         throw "No converter found. Please install Microsoft Word or LibreOffice, then try again."

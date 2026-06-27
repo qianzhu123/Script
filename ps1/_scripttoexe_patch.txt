@@ -1,0 +1,11 @@
+    $Bytes = $null
+    $ScriptText = $null
+
+    if ($Extension -in @('.bat', '.cmd')) {
+        $ScriptText = [System.IO.File]::ReadAllText($SourceScript, [System.Text.Encoding]::Default)
+        $ScriptText = $ScriptText -replace '(?im)^\s*cd\s+/d\s+"?%~dp0"?\s*$', 'cd /d "__SCRIPT_TO_EXE_BASE_DIR__"'
+        $ScriptText = $ScriptText -replace '%~dp0', '__SCRIPT_TO_EXE_BASE_DIR__'
+        $Bytes = [System.Text.Encoding]::Default.GetBytes($ScriptText)
+    } else {
+        $Bytes = [System.IO.File]::ReadAllBytes($SourceScript)
+    }

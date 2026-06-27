@@ -4,6 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const { spawn, execFile, exec } = require('child_process');
 const WebSocket = require('ws');
+const { writeJsonWithBackup, pruneExpiredBackups } = require('./config-backup.js');
+const { buildRunnerLaunch } = require('./runner-launch.js');
 let iconv = null;
 try { iconv = require('iconv-lite'); } catch {}
 
@@ -12,6 +14,7 @@ const PORT = Number(process.env.PORT || 3100);
 const CONFIG_DIR = path.join(ROOT, 'config');
 const SCRIPT_CONFIG = path.join(CONFIG_DIR, 'scripts.json');
 const EXAMPLE_CONFIG = path.join(CONFIG_DIR, 'scripts.example.json');
+const BACKUP_DIR = path.join(ROOT, 'backup');
 
 function ensureDir(dir) { fs.mkdirSync(dir, { recursive: true }); }
 function readJson(file, fallback) { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return fallback; } }
@@ -152,7 +155,13 @@ function ensureConfig() {
   ensureDir(CONFIG_DIR);
   if (!fs.existsSync(EXAMPLE_CONFIG)) writeJson(EXAMPLE_CONFIG, defaultConfig());
   const current = readJson(SCRIPT_CONFIG, null);
-  if (!hasUsableConfig(current)) writeJson(SCRIPT_CONFIG, normalizeConfig(readJson(EXAMPLE_CONFIG, defaultConfig())));
+  if (!hasUsableConfig(current)) {
+    writeJsonWithBackup({
+      sourcePath: SCRIPT_CONFIG,
+      backupDir: BACKUP_DIR,
+      data: normalizeConfig(readJson(EXAMPLE_CONFIG, defaultConfig()))
+    });
+  }
 }
 
 function loadConfig() {
@@ -161,7 +170,13 @@ function loadConfig() {
   return hasUsableConfig(normalized) ? normalized : normalizeConfig(defaultConfig());
 }
 
-function saveConfig(config) { writeJson(SCRIPT_CONFIG, normalizeConfig(config)); }
+function saveConfig(config) {
+  writeJsonWithBackup({
+    sourcePath: SCRIPT_CONFIG,
+    backupDir: BACKUP_DIR,
+    data: normalizeConfig(config)
+  });
+}
 
 function cleanupPort(port) {
   return new Promise((resolve) => {
@@ -342,9 +357,10 @@ function looksLikeUtf16le(buffer) {
 function sanitizeTerminalOutput(text) {
   let s = String(text || '');
   // 常见 TTY 动画会用 ESC[999D ESC[J 回到行首并清空当前行。
-  // 浏览器里不是完整终端，先转成 \r，由前端按“覆盖当前行”处理。
-  s = s.replace(/\x1b\[[0-9;]*D\x1b\[[0-9;]*J/g, '\r');
-  s = s.replace(/\x1b\[[0-9;]*G\x1b\[[0-9;]*J/g, '\r');
+  // 浏览器里不是完整终端，转换成专用控制符，由前端按“覆盖当前行”处理。
+  // 普通 \r 仍然保留为普通回车，避免 BAT 的 set /p、pause 提示被误清空。
+  s = s.replace(/\x1b\[[0-9;]*D\x1b\[[0-9;]*J/g, '\x0b');
+  s = s.replace(/\x1b\[[0-9;]*G\x1b\[[0-9;]*J/g, '\x0b');
   // 光标显示/隐藏等私有模式控制。
   s = s.replace(/\x1b\[\?[0-9;]*[A-Za-z]/g, '');
   // SGR 颜色、粗体、清屏、移动光标等 CSI 序列。
@@ -375,37 +391,13 @@ function runScript(script, ws) {
   if (!fs.existsSync(absolute)) {
     ws.send(JSON.stringify({ type: 'error', message: `Script not found: ${script.path}` })); return null;
   }
-  const ext = path.extname(absolute).toLowerCase();
-  const shellName = String(script.shell || '').toLowerCase();
-  const isPs = ext === '.ps1' || shellName === 'powershell';
-  const isPy = ext === '.py' || shellName === 'python';
-  const childEnv = {
-    ...process.env,
-    SCRIPT_STUDIO_ROOT: ROOT,
-    PYTHONIOENCODING: 'utf-8',
-    PYTHONUTF8: '1',
-    PYTHONUNBUFFERED: '1'
-  };
-  let child;
-  if (isPs) {
-    child = spawn(
-      'powershell.exe',
-      ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', absolute],
-      { cwd: path.dirname(absolute), windowsHide: false, shell: false, env: childEnv }
-    );
-  } else if (isPy) {
-    child = spawn(
-      'python',
-      ['-u', absolute],
-      { cwd: path.dirname(absolute), windowsHide: false, shell: false, env: childEnv }
-    );
-  } else {
-    child = spawn(
-      'cmd.exe',
-      ['/d', '/s', '/c', absolute],
-      { cwd: path.dirname(absolute), windowsHide: false, shell: false, env: childEnv }
-    );
-  }
+  const launch = buildRunnerLaunch({
+    absolutePath: absolute,
+    shellName: script.shell,
+    root: ROOT,
+    baseEnv: process.env
+  });
+  const child = spawn(launch.command, launch.args, launch.options);
   child.stdout.on('data', (c) => ws.send(JSON.stringify({ type: 'data', data: decodeOutput(c) })));
   child.stderr.on('data', (c) => ws.send(JSON.stringify({ type: 'data', data: decodeOutput(c) })));
   child.on('close', (code) => ws.send(JSON.stringify({ type: 'exit', code })));
@@ -430,6 +422,13 @@ wss.on('connection', (ws, req) => {
     } catch {}
   });
   ws.on('close', () => { if (child && !child.killed) child.kill(); processes.delete(token); });
+});
+
+pruneExpiredBackups({
+  backupDir: BACKUP_DIR,
+  retentionDays: 7,
+  onDelete: (file) => console.log(`[backup] Deleted expired backup: ${path.relative(ROOT, file)}`),
+  onError: (error, target) => console.error(`[backup] Cleanup failed for ${target}: ${error.message}`)
 });
 
 server.listen(PORT, '127.0.0.1', () => console.log(`Script Studio is running at http://127.0.0.1:${PORT}`));

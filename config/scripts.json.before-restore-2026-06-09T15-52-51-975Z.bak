@@ -1,0 +1,31 @@
+{
+  "groups": [
+    {
+      "id": "examples",
+      "name": "Examples",
+      "order": 1
+    }
+  ],
+  "scripts": [
+    {
+      "id": "demo-bat",
+      "name": "Demo Batch Script",
+      "path": "bat/demo.bat",
+      "groupId": "examples",
+      "description": "Prints basic information from a relative batch file.",
+      "admin": false,
+      "ports": [],
+      "order": 1
+    },
+    {
+      "id": "demo-ps1",
+      "name": "Demo PowerShell Script",
+      "path": "ps1/demo.ps1",
+      "groupId": "examples",
+      "description": "Prints basic information from a relative PowerShell file.",
+      "admin": false,
+      "ports": [],
+      "order": 2
+    }
+  ]
+}
