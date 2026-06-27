@@ -12,24 +12,24 @@ if not exist "%MD_OUTPUT_DIR%" mkdir "%MD_OUTPUT_DIR%" >nul 2>nul
 if not exist "%MD_TEMP_DIR%" mkdir "%MD_TEMP_DIR%" >nul 2>nul
 cd /d "%SCRIPT_DIR%"
 
-echo MarkItDown 文件/网址转Markdown
+echo MarkItDown file/URL Markdown
 echo [INFO] Output dir: %MD_OUTPUT_DIR%
-echo [INFO] Temp dir:   %MD_TEMP_DIR%
+echo [INFO] Temp dir: %MD_TEMP_DIR%
 echo.
 if not "%~1"=="" (
-  set "INPUT_PATH=%~1"
+ set "INPUT_PATH=%~1"
 ) else (
-  set /p "INPUT_PATH=请输入文件路径或URL: "
+ set /p "INPUT_PATH=Enter filepathURL: "
 )
 if not defined INPUT_PATH (
-  echo 未提供输入。
-  goto FAIL
+ echo was not providedInput.
+ goto FAIL
 )
 set "INPUT_PATH=!INPUT_PATH:"=!"
 where markitdown >nul 2>nul
 if errorlevel 1 (
-  echo 未在PATH中找到markitdown。
-  goto FAIL
+ echo in PATH: markitdown.
+ goto FAIL
 )
 set "IS_URL="
 if /I "!INPUT_PATH:~0,7!"=="http://" set "IS_URL=1"
@@ -39,14 +39,14 @@ if defined IS_URL goto HANDLE_URL
 :HANDLE_FILE
 set "SOURCE=!INPUT_PATH!"
 if not exist "!SOURCE!" (
-  echo 文件未找到:
-  echo !SOURCE!
-  goto FAIL
+ echo filenot found:
+ echo !SOURCE!
+ goto FAIL
 )
 for %%I in ("!SOURCE!") do (
-  set "SRC_FULL=%%~fI"
-  set "SRC_DIR=%%~dpI"
-  set "SRC_NAME=%%~nI"
+ set "SRC_FULL=%%~fI"
+ set "SRC_DIR=%%~dpI"
+ set "SRC_NAME=%%~nI"
 )
 rem If input is already inside this project, keep output next to it. Otherwise route output to project output\markdown.
 set "OUTPUT_DIR=!SRC_DIR!"
@@ -56,14 +56,14 @@ set "OUTPUT=!OUTPUT_DIR!!SRC_NAME!.md"
 call :unique_output OUTPUT
 
 echo.
-echo 正在转换文件:
+echo convertfile:
 echo !SOURCE!
 echo Output:
 echo !OUTPUT!
 echo.
 markitdown "!SOURCE!" -o "!OUTPUT!" 2>"%MD_TEMP_DIR%\markitdown_error_%RANDOM%%RANDOM%.log"
 if errorlevel 1 goto FAIL
-echo Markdown创建成功: !OUTPUT!
+echo MarkdowncreateSuccess: !OUTPUT!
 goto OK
 
 :HANDLE_URL
@@ -90,14 +90,14 @@ set "OUTPUT=%MD_OUTPUT_DIR%\!BASENAME!.md"
 call :unique_output OUTPUT
 
 echo.
-echo 正在转换URL:
+echo convertURL:
 echo !URL!
 echo Output:
 echo !OUTPUT!
 echo.
 markitdown "!URL!" -o "!OUTPUT!" 2>"%MD_TEMP_DIR%\markitdown_error_%RANDOM%%RANDOM%.log"
 if errorlevel 1 goto FAIL
-echo Markdown创建成功: !OUTPUT!
+echo MarkdowncreateSuccess: !OUTPUT!
 goto OK
 
 :unique_output
@@ -105,9 +105,9 @@ set "VAR=%~1"
 set "CAND=!%VAR%!"
 if not exist "!CAND!" exit /b 0
 for %%I in ("!CAND!") do (
-  set "OD=%%~dpI"
-  set "ON=%%~nI"
-  set "OE=%%~xI"
+ set "OD=%%~dpI"
+ set "ON=%%~nI"
+ set "OE=%%~xI"
 )
 set "STAMP=%date:~0,4%%date:~5,2%%date:~8,2%_%time:~0,2%%time:~3,2%%time:~6,2%"
 set "STAMP=!STAMP: =0!"
@@ -116,7 +116,7 @@ exit /b 0
 
 :FAIL
 echo.
-echo 转换失败。
+echo convertFailed.
 if /i not "%DAILY_WEB_TERMINAL%"=="1" if /i not "%DAILY_WEB_NO_PAUSE%"=="1" pause
 exit /b 1
 :OK

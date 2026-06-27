@@ -5,11 +5,11 @@ $source = Get-Content -Raw -LiteralPath $batPath
 $failures = [System.Collections.Generic.List[string]]::new()
 
 function Assert-Contains([string]$Needle, [string]$Message) {
-    if (-not $source.Contains($Needle)) { $failures.Add($Message) }
+ if (-not $source.Contains($Needle)) { $failures.Add($Message) }
 }
 
 function Assert-NotContains([string]$Needle, [string]$Message) {
-    if ($source.Contains($Needle)) { $failures.Add($Message) }
+ if ($source.Contains($Needle)) { $failures.Add($Message) }
 }
 
 Assert-Contains 'Enter Word file or folder path:' 'The script must prompt for a file or folder.'
@@ -30,29 +30,29 @@ Assert-NotContains 'Unblock-File -LiteralPath $file.FullName' 'The original sour
 Assert-Contains '$word.Documents.Open($openPath' 'Word must open the selected original or temporary path.'
 Assert-Contains 'Remove-Item -LiteralPath $openCopy.TempDir -Recurse -Force' 'Temporary files must be removed in cleanup.'
 
-$tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('word to pdf 中文 ' + [guid]::NewGuid())
+$tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('word to pdf ' + [guid]::NewGuid())
 $inputFile = Join-Path $tempRoot 'input.txt'
 try {
-    New-Item -ItemType Directory -Path $tempRoot | Out-Null
-    [System.IO.File]::WriteAllText($inputFile, '"' + $tempRoot + '"' + "`r`n", [System.Text.UTF8Encoding]::new($false))
-    $cmd = 'type "{0}" | "{1}"' -f $inputFile, $batPath
-    $ErrorActionPreference = 'Continue'
-    $output = & $env:ComSpec /d /c $cmd 2>&1 | Out-String
-    $ErrorActionPreference = 'Stop'
-    if ($output.Contains('unexpected at this time')) {
-        $failures.Add('Quoted folder input still breaks CMD parsing.')
-    }
-    if (-not $output.Contains('No supported Word documents found.')) {
-        $failures.Add('Quoted Chinese folder input did not reach folder discovery.')
-    }
+ New-Item -ItemType Directory -Path $tempRoot | Out-Null
+ [System.IO.File]::WriteAllText($inputFile, '"' + $tempRoot + '"' + "`r`n", [System.Text.UTF8Encoding]::new($false))
+ $cmd = 'type "{0}" | "{1}"' -f $inputFile, $batPath
+ $ErrorActionPreference = 'Continue'
+ $output = & $env:ComSpec /d /c $cmd 2>&1 | Out-String
+ $ErrorActionPreference = 'Stop'
+ if ($output.Contains('unexpected at this time')) {
+ $failures.Add('Quoted folder input still breaks CMD parsing.')
+ }
+ if (-not $output.Contains('No supported Word documents found.')) {
+ $failures.Add('Quoted Chinese folder input did not reach folder discovery.')
+ }
 }
 finally {
-    Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
+ Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 if ($failures.Count -gt 0) {
-    $failures | ForEach-Object { Write-Error $_ }
-    exit 1
+ $failures | ForEach-Object { Write-Error $_ }
+ exit 1
 }
 
 Write-Host 'word_to_pdf folder regression tests passed.'

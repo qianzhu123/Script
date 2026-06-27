@@ -1,28 +1,28 @@
 @echo off
-title Nginx 控制中心 - 启动中...
+title Nginx - starting...
 chcp 65001 >nul
 
-:: 设置项目访问地址
+:: project 
 set TARGET_URL=http://localhost
 
-echo [1/2] 正在检查 Nginx 状态...
+echo [1/2] check Nginx status...
 tasklist /fi "imagename eq nginx.exe" | findstr /i "nginx.exe" > nul
 if %errorlevel% equ 0 (
-    echo [!] Nginx 已经在运行中，跳过启动步骤。
+ echo [!] Nginx Run,skipstarting.
 ) else (
-    echo [2/2] 正在启动 Nginx 服务...
-    start nginx.exe
-    if %errorlevel% neq 0 (
-        echo [错误] Nginx 启动失败，请检查配置文件！
-        pause
-        exit /b
-    )
+ echo [2/2] Start Nginx service...
+ start nginx.exe
+ if %errorlevel% neq 0 (
+ echo [ERROR] Nginx StartFailed,checkconfigfile
+ pause
+ exit /b
+)
 )
 
 echo.
-echo [成功] 正在为您打开网站: %TARGET_URL%
+echo [Success] open: %TARGET_URL%
 start %TARGET_URL%
 
-:: 停留3秒后自动关闭脚本窗口
+:: 3seconds automaticclosescript 
 timeout /t 3 >nul
 exit

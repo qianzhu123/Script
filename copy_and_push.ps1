@@ -1,25 +1,25 @@
 $src = "D:\code\myweb\daily"
 $dst = "D:\tools\Productivity\AI_Tools\AI\Cherry-studio\Cherry Studio\codemywebdaily"
 
-# 创建目标 public 目录
+# create public Directory
 $pubDst = $dst + "\public"
 if (-not (Test-Path $pubDst)) {
-    New-Item -ItemType Directory -Path $pubDst | Out-Null
+ New-Item -ItemType Directory -Path $pubDst | Out-Null
 }
 
-# 复制四个文件
+# copy file
 $maps = @(
-    ("server.js",          "server.js"),
-    ("public\app.js",      "public\app.js"),
-    ("public\index.html",  "public\index.html"),
-    ("public\style.css",   "public\style.css")
+ ("server.js", "server.js"),
+ ("public\app.js", "public\app.js"),
+ ("public\index.html", "public\index.html"),
+ ("public\style.css", "public\style.css")
 )
 
 foreach ($m in $maps) {
-    $from = $src + "\" + $m[0]
-    $to   = $dst + "\" + $m[1]
-    Copy-Item -LiteralPath $from -Destination $to -Force
-    Write-Host "Copied: $($m[0])"
+ $from = $src + "\" + $m[0]
+ $to = $dst + "\" + $m[1]
+ Copy-Item -LiteralPath $from -Destination $to -Force
+ Write-Host "Copied: $($m[0])"
 }
 
 # git add + commit + push

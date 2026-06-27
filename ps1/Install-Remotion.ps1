@@ -547,7 +547,7 @@ const WorkflowScene: FC = () => {
       <DataPanel start={142} end={224} />
       <Ring start={128} />
       <div style={{position: 'absolute', left: 120, bottom: 170, fontSize: 34, color: colors.muted, opacity: appear(frame, 174, 198)}}>
-        Source files → React frames → Preview → MP4 render
+        Source files -> React frames -> Preview -> MP4 render
       </div>
     </AbsoluteFill>
   );
@@ -567,7 +567,7 @@ const FeatureScene: FC = () => {
         <FeatureCard
           start={236}
           index={0}
-          icon="⚡"
+          icon=""
           color={colors.cyan}
           title="Animate"
           text="Use frame numbers, springs, easing and interpolation for precise motion."
@@ -575,7 +575,7 @@ const FeatureScene: FC = () => {
         <FeatureCard
           start={250}
           index={1}
-          icon="🧩"
+          icon=""
           color={colors.violet}
           title="Compose"
           text="Split your video into reusable React components and scenes."
@@ -583,7 +583,7 @@ const FeatureScene: FC = () => {
         <FeatureCard
           start={264}
           index={2}
-          icon="🎬"
+          icon=""
           color={colors.green}
           title="Render"
           text="Export MP4, still images, GIFs, image sequences or use server rendering."

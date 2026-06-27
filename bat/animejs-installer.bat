@@ -1,10 +1,10 @@
 @echo off
 chcp 65001 >nul
-title Anime.js 项目安装器
+title Anime.js project installer
 
 echo.
 echo ========================================
-echo      Anime.js 项目安装器
+echo Anime.js project installer
 echo ========================================
 echo.
 

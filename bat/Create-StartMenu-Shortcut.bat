@@ -1,52 +1,52 @@
 @echo off
 setlocal EnableExtensions DisableDelayedExpansion
 
-title 复制快捷方式到开始菜单
+title copyshortcut starting
 
 set "STARTMENU=C:\Users\Light\AppData\Roaming\Microsoft\Windows\Start Menu\Programs"
 
 echo.
-echo === 复制快捷方式到开始菜单 ===
-echo 目标位置: %STARTMENU%
+echo === copyshortcut starting ===
+echo target location: %STARTMENU%
 echo.
-echo 请输入现有.lnk文件的完整路径。
-echo 路径可以包含引号。
+echo Enter.lnkfile fullPath.
+echo path.
 echo.
 
-set /p "SOURCE=快捷方式路径: "
+set /p "SOURCE=shortcutPath: "
 
 if not defined SOURCE (
-  echo 未输入路径。
-  pause
-  exit /b 1
+ echo InputPath.
+ pause
+ exit /b 1
 )
 
 set "SOURCE=%SOURCE:"=%"
 
 if not defined SOURCE (
-  echo 未输入有效路径。
-  pause
-  exit /b 1
+ echo InputvalidPath.
+ pause
+ exit /b 1
 )
 
 if /I not "%SOURCE:~-4%"==".lnk" (
-  echo 文件必须是.lnk快捷方式。
-  pause
-  exit /b 1
+ echo file.lnkshortcut.
+ pause
+ exit /b 1
 )
 
 if not exist "%SOURCE%" (
-  echo 文件不存在:
-  echo %SOURCE%
-  pause
-  exit /b 1
+ echo filedoes not exist:
+ echo %SOURCE%
+ pause
+ exit /b 1
 )
 
 if not exist "%STARTMENU%" (
-  echo 目标文件夹不存在:
-  echo %STARTMENU%
-  pause
-  exit /b 1
+ echo Target file does not exist:
+ echo %STARTMENU%
+ pause
+ exit /b 1
 )
 
 for %%I in ("%SOURCE%") do set "FILENAME=%%~nxI"
@@ -56,16 +56,16 @@ copy /Y "%SOURCE%" "%DEST%" >nul
 set "ERR=%ERRORLEVEL%"
 
 if not "%ERR%"=="0" (
-  echo 复制快捷方式失败。
-  pause
-  exit /b %ERR%
+ echo copyshortcutFailed.
+ pause
+ exit /b %ERR%
 )
 
 echo.
-echo 快捷方式复制成功:
+echo shortcutcopySuccess:
 echo %DEST%
 echo.
-echo 现在可以按Win键搜索此快捷方式。
+echo Win shortcut.
 echo.
 pause
 exit /b 0

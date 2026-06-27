@@ -1,5 +1,3 @@
-$ErrorActionPreference = "Stop"
-
 <#
 .SYNOPSIS
 Convert Word documents to PDF.
@@ -18,6 +16,8 @@ param(
     [string]$OutputDir = "",
     [switch]$Recurse
 )
+
+$ErrorActionPreference = "Stop"
 
 function Write-Info {
     param([string]$Message)

@@ -8,8 +8,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%PS1_PATH%" %*
 set "EXIT_CODE=%ERRORLEVEL%"
 
 if not "%EXIT_CODE%"=="0" (
-    echo.
-    echo 脚本失败，退出码 %EXIT_CODE%.
+ echo.
+ echo scriptFailed,exit code %EXIT_CODE%.
 )
 
 echo.

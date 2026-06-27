@@ -18,27 +18,27 @@ if not exist "%DAILY_TEMP_DIR%" mkdir "%DAILY_TEMP_DIR%" >nul 2>nul
 set "REPORT=%REPORT_DIR%\clean-c.md"
 
 echo ============================================================
-echo   每日磁盘清理 - C盘 (v2 - 优化版，仅扫描)
+echo clean - C (v2 -,onlyscan)
 echo ============================================================
-echo [信息] 报告: %REPORT%
-echo [信息] 临时目录: %DAILY_TEMP_DIR%
+echo [INFO] report: %REPORT%
+echo [INFO] tempDirectory: %DAILY_TEMP_DIR%
 echo.
 
 if not exist "%PS1%" (
-  echo [错误] 未找到PowerShell脚本: %PS1%
-  set "EXIT_CODE=2"
-  goto END
+ echo [ERROR] PowerShell script: %PS1%
+ set "EXIT_CODE=2"
+ goto END
 )
 
 set "POWERSHELL_EXE=powershell.exe"
 where powershell.exe >nul 2>nul
 if errorlevel 1 (
-  where pwsh.exe >nul 2>nul
-  if errorlevel 1 (
-    echo [错误] 未找到powershell.exe或pwsh.exe。
-    set "EXIT_CODE=3"
-    goto END
-  ) else set "POWERSHELL_EXE=pwsh.exe"
+ where pwsh.exe >nul 2>nul
+ if errorlevel 1 (
+ echo [ERROR] powershell.exe pwsh.exe.
+ set "EXIT_CODE=3"
+ goto END
+) else set "POWERSHELL_EXE=pwsh.exe"
 )
 
 REM Default: fast mode (skip full recursive C-drive scan)
@@ -50,9 +50,9 @@ set "EXIT_CODE=%ERRORLEVEL%"
 :END
 echo.
 if "%EXIT_CODE%"=="0" (
-  echo [完成] C盘任务完成。报告: %REPORT%
+ echo [DONE] CDone.report: %REPORT%
 ) else (
-  echo [失败] C盘任务失败。退出码: %EXIT_CODE%
+ echo [FAILED] C Failed.exit code: %EXIT_CODE%
 )
 if /i not "%DAILY_WEB_TERMINAL%"=="1" if /i not "%DAILY_WEB_NO_PAUSE%"=="1" pause
 exit /b %EXIT_CODE%

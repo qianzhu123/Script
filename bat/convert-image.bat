@@ -10,12 +10,12 @@ set "SRC=%~1"
 set "FMT=%~2"
 
 if not defined SRC (
-    echo 请输入源图片路径:
-    set /p "SRC=> "
+ echo Enter imagePath:
+ set /p "SRC=> "
 )
 
 if not defined FMT (
-    call :selectFormat
+ call :selectFormat
 )
 
 if not defined SRC goto :usage
@@ -45,31 +45,31 @@ if /I "%SRC_EXT%"=="%FMT%" goto :sameformat
 if not exist "%TEMP_DIR%" mkdir "%TEMP_DIR%" >nul 2>&1
 
 echo.
-echo 开始转换...
+echo Startconvert...
 powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%PS1%" -ImagePath "%SRC%" -TargetFormat "%FMT%"
 set "RC=%errorlevel%"
 
 if exist "%TEMP_DIR%" rmdir /s /q "%TEMP_DIR%" >nul 2>&1
 
 if "%RC%"=="0" (
-    echo.
-    echo [完成] 转换完成。
+ echo.
+ echo [DONE] convertDone.
 ) else (
-    echo.
-    echo [错误] 转换失败。
+ echo.
+ echo [ERROR] convertFailed.
 )
 goto :pauseexit
 
 :selectFormat
 echo.
-echo 请选择目标格式:
-echo   [1] jpg
-echo   [2] jpeg
-echo   [3] png
-echo   [4] bmp
-echo   [5] gif
-echo   [6] tiff
-echo   [7] ico
+echo Select an actionformat:
+echo [1] jpg
+echo [2] jpeg
+echo [3] png
+echo [4] bmp
+echo [5] gif
+echo [6] tiff
+echo [7] ico
 set /p "FMT=> "
 if "%FMT%"=="1" set "FMT=jpg"
 if "%FMT%"=="2" set "FMT=jpeg"
@@ -81,29 +81,29 @@ if "%FMT%"=="7" set "FMT=ico"
 exit /b 0
 
 :usage
-echo [错误] 用法: %~nx0 "image_path" target_format
-echo [错误] 支持的格式: jpg jpeg png bmp gif tiff ico
+echo [ERROR] Usage: %~nx0 "image_path" target_format
+echo [ERROR] format: jpg jpeg png bmp gif tiff ico
 set "RC=1"
 goto :pauseexit
 
 :notfound
-echo [错误] 源文件未找到: %SRC%
+echo [ERROR] Source filenot found: %SRC%
 set "RC=1"
 goto :pauseexit
 
 :missingps1
-echo [错误] 缺少PowerShell脚本: %PS1%
+echo [ERROR] PowerShellscript: %PS1%
 set "RC=1"
 goto :pauseexit
 
 :badformat
-echo [错误] 不支持的目标格式: %FMT%
-echo [错误] 支持的格式: jpg jpeg png bmp gif tiff ico
+echo [ERROR] unsupported format: %FMT%
+echo [ERROR] format: jpg jpeg png bmp gif tiff ico
 set "RC=1"
 goto :pauseexit
 
 :sameformat
-echo [错误] 源文件已经是该格式。
+echo [ERROR] Source file format.
 set "RC=1"
 goto :pauseexit
 
