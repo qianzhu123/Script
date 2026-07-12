@@ -7,10 +7,10 @@ This repository is used to manage daily utility scripts. When I ask an AI assist
 For script creation tasks, only the following paths may be created or modified by default:
 
 ```text
-D:\code\myweb\daily\bat\*.bat
-D:\code\myweb\daily\ps1\*.ps1
-D:\code\myweb\daily\config\scripts.json
-D:\code\myweb\daily\README.md
+bat/*.bat
+ps1/*.ps1
+config/scripts.json
+README.md
 ```
 
 Do not modify any other project files unless I explicitly ask for it.
@@ -22,7 +22,7 @@ Do not modify any other project files unless I explicitly ask for it.
 Windows Batch scripts must be created under:
 
 ```text
-D:\code\myweb\daily\bat
+bat/
 ```
 
 The script path in `config/scripts.json` should use a project-relative path:
@@ -36,7 +36,7 @@ bat/script_name.bat
 PowerShell scripts must be created under:
 
 ```text
-D:\code\myweb\daily\ps1
+ps1/
 ```
 
 The script path in `config/scripts.json` should use a project-relative path:
@@ -85,7 +85,7 @@ ps1/clean_temp_files.ps1
 After creating a new script, update the following file:
 
 ```text
-D:\code\myweb\daily\config\scripts.json
+config/scripts.json
 ```
 
 The new script must be added to the `scripts` array. Its group must be selected according to the existing `groups` array.
