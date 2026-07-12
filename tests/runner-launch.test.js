@@ -21,7 +21,8 @@ test('builds a hidden PowerShell launch specification', () => {
   const spec = buildRunnerLaunch({ absolutePath, shellName: '', root, baseEnv });
 
   assert.equal(spec.command, 'powershell.exe');
-  assert.deepEqual(spec.args, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', absolutePath]);
+  assert.deepEqual(spec.args, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-InputFormat', 'None', '-Command', `. '${absolutePath.replace(/'/g, "''")}'`]);
+  assert.deepEqual(spec.options.stdio, ['pipe', 'pipe', 'pipe']);
   assertCommon(spec, absolutePath);
 });
 

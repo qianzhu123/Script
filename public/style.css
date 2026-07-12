@@ -110,6 +110,17 @@ h2 { margin: 0; font-size: 24px; }
 dialog { border: 0; border-radius: 22px; padding: 0; width: min(560px, 92vw); box-shadow: 0 30px 80px rgba(0,0,0,.25); }
 dialog::backdrop { background: rgba(15, 23, 42, .38); backdrop-filter: blur(4px); }
 .app-dialog { width: min(460px, 92vw); }
+.poll-dialog { width: min(640px, 92vw); }
+.poll-field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.poll-input-source { min-height: 116px !important; font-family: Consolas, Monaco, monospace; font-size: 13px; line-height: 1.55; }
+.dialog-hint { margin: -5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.dialog-hint code { padding: 1px 4px; border-radius: 4px; background: #eef4fb; color: #344054; font-family: Consolas, Monaco, monospace; }
+.number-unit-field { display: grid; grid-template-columns: minmax(0, 1fr) 92px; gap: 8px; }
+.validation-message { min-height: 20px; margin: 0; color: var(--danger); font-size: 13px; font-weight: 800; }
+.poll-badge { display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; padding: 3px 8px; border-radius: 999px; background: #fff8db; color: #8a5a00; border: 1px solid #f2b42b; font-size: 11px; font-weight: 900; vertical-align: middle; }
+.script-card.polling { border-color: #f2b42b; box-shadow: 0 0 0 2px rgba(242,180,43,.14); }
+.run-tab-btn.polling { color: #8a5a00; background: #fff8db; }
+.poll-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #f2b42b; flex-shrink: 0; animation: pulse-dot 1.4s ease-in-out infinite; }
 .dialog-form { padding: 26px; display: flex; flex-direction: column; gap: 14px; }
 .dialog-form label { display: flex; flex-direction: column; gap: 7px; font-weight: 800; }
 .dialog-message { margin: 0; color: var(--muted); line-height: 1.7; }
@@ -175,6 +186,7 @@ dialog::backdrop { background: rgba(15, 23, 42, .38); backdrop-filter: blur(4px)
   .panel-resizer { display: none; }
   .sidebar, .scripts-panel, .terminal-panel { border-right: 0; border-bottom: 1px solid var(--border); }
   .script-card { grid-template-columns: 1fr; }
+  .poll-field-grid { grid-template-columns: 1fr; }
   .card-actions { justify-content: flex-start; }
   .terminal { height: 360px; }
 }

@@ -18,10 +18,15 @@ function buildRunnerLaunch({ absolutePath, shellName, root, baseEnv }) {
   };
 
   if (ext === '.ps1' || normalizedShell === 'powershell') {
+    // 使用 -Command 而非 -File，因为 -File 模式下 Read-Host 的提示文字
+    // 不会输出到 stdout（被写到 Windows 控制台 API），Node.js spawn 捕获不到。
+    // -Command 模式下所有 Write-Host / Read-Host 提示都会走 stdout。
+    // 用 iex 逐行读取文件内容，避免 -Command 内联脚本时转义问题。
+    // 加 -InputFormat None 让 PowerShell 不尝试解析 stdin 作为 PS 代码。
     return {
       command: 'powershell.exe',
-      args: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', absolutePath],
-      options
+      args: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-InputFormat', 'None', '-Command', `. '${absolutePath.replace(/'/g, "''")}'`],
+      options: { ...options, stdio: ['pipe', 'pipe', 'pipe'] }
     };
   }
 

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Script Studio</title>
   <link rel="icon" href="/favicon.svg" />
-  <link rel="stylesheet" href="/style.css?v=20260627" />
+  <link rel="stylesheet" href="/style.css?v=20260713" />
 </head>
 <body>
   <main id="layoutRoot" class="layout">
@@ -43,6 +43,7 @@
         </div>
         <div class="actions selected-actions-row">
           <button id="runBtn" class="primary-btn" disabled>运行</button>
+          <button id="pollBtn" class="warning-btn" disabled>轮询运行</button>
           <button id="exploreBtn" class="secondary-btn" disabled>文件夹</button>
           <button id="stopBtn" class="danger-btn" disabled>停止</button>
         </div>
@@ -80,6 +81,42 @@
     </form>
   </dialog>
 
+  <dialog id="pollDialog" class="poll-dialog">
+    <form id="pollForm" method="dialog" class="dialog-form">
+      <h2>轮询运行</h2>
+      <div class="poll-field-grid">
+        <label>间隔时间
+          <div class="number-unit-field">
+            <input id="pollInterval" type="number" min="1" step="1" value="30" required />
+            <select id="pollIntervalUnit">
+              <option value="1000">秒</option>
+              <option value="60000" selected>分钟</option>
+              <option value="3600000">小时</option>
+            </select>
+          </div>
+        </label>
+        <label>总时长
+          <div class="number-unit-field">
+            <input id="pollDuration" type="number" min="1" step="1" value="3" required />
+            <select id="pollDurationUnit">
+              <option value="1000">秒</option>
+              <option value="60000">分钟</option>
+              <option value="3600000" selected>小时</option>
+            </select>
+          </div>
+        </label>
+      </div>
+      <label>自动输入或输入文件
+        <textarea id="pollInputSource" class="poll-input-source"></textarea>
+      </label>
+      <p id="pollValidation" class="validation-message" aria-live="polite"></p>
+      <div class="dialog-actions">
+        <button type="button" id="cancelPollBtn">取消</button>
+        <button class="warning-btn" value="default">开始轮询</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="appDialog" class="app-dialog">
     <form id="appDialogForm" method="dialog" class="dialog-form">
       <h2 id="appDialogTitle">提示</h2>
@@ -94,6 +131,6 @@
 
   <script src="/terminal-copy.js?v=20260627"></script>
   <script src="/script-search.js?v=20260627"></script>
-  <script src="/app.js?v=20260627"></script>
+  <script src="/app.js?v=20260713"></script>
 </body>
 </html>

@@ -8,72 +8,82 @@
     {
       "id": "group-mq8b1r2n-6set70",
       "name": "本地服务",
-      "order": 2
+      "order": 3
     },
     {
       "id": "开发工具",
       "name": "开发工具",
-      "order": 6
+      "order": 10
     },
     {
       "id": "安卓逆向",
       "name": "逆向",
-      "order": 7
+      "order": 11
     },
     {
       "id": "文件处理",
       "name": "文件处理",
-      "order": 5
+      "order": 9
     },
     {
       "id": "端口与服务",
       "name": "端口与服务",
-      "order": 9
+      "order": 12
     },
     {
       "id": "磁盘清理",
       "name": "磁盘清理",
-      "order": 10
+      "order": 13
     },
     {
       "id": "系统维护",
       "name": "系统维护",
-      "order": 11
+      "order": 14
     },
     {
       "id": "网络检查",
       "name": "网络检查",
-      "order": 12
+      "order": 15
     },
     {
       "id": "group-mq8bcb2k-ih45b6",
       "name": "代理",
-      "order": 13
+      "order": 16
     },
     {
       "id": "group-mq9a888i",
       "name": "自动化",
-      "order": 8
+      "order": 5
     },
     {
       "id": "group-mq9j08xp",
       "name": "一些数据",
-      "order": 14
+      "order": 17
     },
     {
       "id": "skill",
       "name": "skill",
-      "order": 3
+      "order": 4
     },
     {
       "id": "group-mqtiytuf",
       "name": "视频处理",
-      "order": 4
+      "order": 7
     },
     {
       "id": "group-image",
       "name": "图片处理",
-      "order": 15
+      "order": 8
+    },
+    {
+      "id": "group-mr0j2k9p",
+      "name": "下载",
+      "order": 6
+    },
+    {
+      "id": "group-mr30tkvo",
+      "name": "数据逆向",
+      "order": 2
     }
   ],
   "scripts": [
@@ -554,10 +564,10 @@
     },
     {
       "id": "install-impeccable-skill",
-      "name": "安装前端设计Skill",
+      "name": "install-impeccable-skill",
       "groupId": "skill",
       "path": "bat/install-impeccable-skill.bat",
-      "description": "前端设计指导skill",
+      "description": "挑出AI生成的丑UI，命令逐项修正",
       "priority": "normal",
       "shell": "",
       "ports": [],
@@ -565,10 +575,10 @@
     },
     {
       "id": "install-tasteskill",
-      "name": "安装UI框架Skill",
+      "name": "Install-TasteSkill",
       "groupId": "skill",
       "path": "bat/Install-TasteSkill.bat",
-      "description": "UI框架",
+      "description": "3个旋钮调布局/动画/密度",
       "priority": "normal",
       "shell": "",
       "ports": [],
@@ -577,6 +587,8 @@
     {
       "id": "start-mqdejcxe",
       "name": "WireMock服务",
+      "groupId": "",
+      "path": "",
       "description": "启动WireMock模拟服务",
       "priority": "normal",
       "shell": "",
@@ -585,10 +597,10 @@
     },
     {
       "id": "install-remotion",
-      "name": "安装Remotion",
+      "name": "install-remotion",
       "groupId": "skill",
       "path": "bat/install-remotion.bat",
-      "description": "Node.js / React 视频生成框架",
+      "description": "Node.js / React 视频生成框架，较为专业",
       "priority": "normal",
       "shell": "",
       "ports": [],
@@ -596,10 +608,10 @@
     },
     {
       "id": "install-hyperframes",
-      "name": "安装HyperFrames",
+      "name": "install-hyperframes",
       "groupId": "skill",
       "path": "bat/install-hyperframes.bat",
-      "description": "HTML视频框架安装与项目初始化",
+      "description": "HTML视频框架安装与项目初始化，快速",
       "priority": "normal",
       "shell": "",
       "ports": [],
@@ -636,7 +648,7 @@
       "priority": "normal",
       "shell": "",
       "ports": [],
-      "order": 51
+      "order": 3
     },
     {
       "id": "ps1-video-speed-export-ps1",
@@ -725,6 +737,116 @@
       "shell": "",
       "ports": [],
       "order": 59
+    },
+    {
+      "id": "ps1-copy_design_md-ps1",
+      "name": "复制设计文档",
+      "groupId": "skill",
+      "path": "bat/copy_design_md.bat",
+      "description": "从design-md库选择品牌设计文档复制到项目",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 60
+    },
+    {
+      "id": "bat-douyin_download-bat",
+      "name": "douyin_download",
+      "groupId": "安卓逆向",
+      "path": "bat/douyin_download.bat",
+      "description": "下载抖音无水印视频或图集",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 61
+    },
+    {
+      "id": "start-mr0jbbxy",
+      "name": "start",
+      "groupId": "group-mr0j2k9p",
+      "path": "D:\\code\\python\\utils\\douyin-downloader\\start.bat",
+      "description": "抖音视频下载",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 62
+    },
+    {
+      "id": "start-mr0jbt1h",
+      "name": "start",
+      "groupId": "group-mr0j2k9p",
+      "path": "D:\\code\\python\\utils\\sqej8-dl\\start.bat",
+      "description": "某网站视频下载",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 63
+    },
+    {
+      "id": "ps1-remove_subtitle-ps1",
+      "name": "remove_subtitle",
+      "groupId": "group-mqtiytuf",
+      "path": "bat/remove_subtitle.bat",
+      "description": "去除视频字幕(软字幕移除/裁剪/模糊遮盖)",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 64
+    },
+    {
+      "id": "ps1-video_dubbing-ps1",
+      "name": "video_dubbing",
+      "groupId": "group-mqtiytuf",
+      "path": "bat/video_dubbing.bat",
+      "description": "视频AI配音与字幕生成(Edge-TTS+FFmpeg)",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 65
+    },
+    {
+      "id": "watch",
+      "name": "watch",
+      "groupId": "group-mr30tkvo",
+      "path": "D:\\code\\python\\utils\\douyin-monitor\\watch.bat",
+      "description": "抖音直播数据查询",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 66
+    },
+    {
+      "id": "query",
+      "name": "query",
+      "groupId": "group-mr30tkvo",
+      "path": "D:\\code\\python\\utils\\douyin-monitor\\query.bat",
+      "description": "抖音个人主页数据查询",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 67
+    },
+    {
+      "id": "ps1-clone_apk-ps1",
+      "name": "clone_apk",
+      "groupId": "安卓逆向",
+      "path": "bat/clone_apk.bat",
+      "description": "生成多开APK安装包",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 68
+    },
+    {
+      "id": "ps1-scheduled_runner-ps1",
+      "name": "scheduled_runner",
+      "groupId": "group-mq9a888i",
+      "path": "bat/scheduled_runner.bat",
+      "description": "按间隔和总时长定时运行脚本",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 4
     }
   ]
 }

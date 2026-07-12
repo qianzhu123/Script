@@ -13,6 +13,41 @@ const state = {
   searchIndex: -1
 };
 
+// ── URL hash 路由 ──────────────────────────────────────────
+// 格式: #group=<groupId>  或  #group=<groupId>&script=<scriptId>
+// 特殊值: group=all 表示全部脚本
+function parseHash() {
+  const hash = location.hash.slice(1); // 去掉 #
+  const params = new URLSearchParams(hash);
+  return {
+    group: params.get('group') || '',
+    script: params.get('script') || ''
+  };
+}
+
+function updateHash() {
+  const groupId = state.currentGroup || 'all';
+  const parts = [`group=${encodeURIComponent(groupId)}`];
+  if (state.selectedScript) {
+    parts.push(`script=${encodeURIComponent(state.selectedScript.id)}`);
+  }
+  const newHash = parts.join('&');
+  // 只在 hash 真正变化时才更新，避免触发 popstate
+  const current = location.hash.slice(1);
+  if (current !== newHash) {
+    history.replaceState(null, '', `#${newHash}`);
+  }
+}
+
+function applyHash() {
+  const { group, script } = parseHash();
+  if (group) {
+    state.currentGroup = group;
+  }
+  // script 选择延后到 loadConfig 之后，因为此时 config 还没加载
+  state._pendingScriptId = script || '';
+}
+
 const $ = (id) => document.getElementById(id);
 const sorted = (items) => [...items].sort((a, b) => (a.order || 0) - (b.order || 0));
 let copyFeedbackTimer = null;
@@ -54,7 +89,19 @@ async function api(url, options = {}) {
     ...options
   });
   const text = await response.text();
-  const data = text ? JSON.parse(text) : {};
+  const contentType = response.headers.get('content-type') || '';
+  let data = {};
+
+  if (text) {
+    if (!contentType.includes('application/json')) {
+      throw new Error(`接口 ${url} 返回了非 JSON 内容（HTTP ${response.status}）。请重启本地服务后重试。`);
+    }
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error(`接口 ${url} 返回了无效 JSON（HTTP ${response.status}）。`);
+    }
+  }
   if (!response.ok) throw new Error(data.error || response.statusText);
   return data;
 }
@@ -222,10 +269,12 @@ function renderRunTabs() {
 
   state.sessions.forEach((session, tabId) => {
     const btn = document.createElement('button');
-    btn.className = `run-tab-btn ${tabId === state.activeTabId ? 'active' : ''}`;
-    // 运行中显示小圆点
-    const dot = session.ws ? '<span class="run-dot"></span>' : '';
-    btn.innerHTML = `${dot}<span class="run-tab-label">${escapeHtml(session.scriptName)}</span><span class="tab-close" data-tab="${tabId}">×</span>`;
+    btn.className = `run-tab-btn ${tabId === state.activeTabId ? 'active' : ''} ${session.polling?.active ? 'polling' : ''}`;
+    const dot = session.polling?.active
+      ? '<span class="poll-dot" title="轮询运行中"></span>'
+      : (session.ws ? '<span class="run-dot"></span>' : '');
+    const label = session.polling ? `轮询 · ${session.scriptName}` : session.scriptName;
+    btn.innerHTML = `${dot}<span class="run-tab-label">${escapeHtml(label)}</span><span class="tab-close" data-tab="${tabId}">×</span>`;
     btn.onclick = (e) => {
       if (e.target.classList.contains('tab-close')) return;
       switchRunTab(tabId);
@@ -261,6 +310,8 @@ function switchRunTab(tabId) {
 /** 关闭 tab：先停止 ws，再移除 */
 function closeRunTab(tabId) {
   const session = state.sessions.get(tabId);
+  if (session?.polling?.jobId) api(`/api/polls/${session.polling.jobId}/stop`, { method: 'POST' }).catch(() => {});
+  if (session) cancelPolling(session);
   if (session && session.ws) {
     try { session.ws.send(JSON.stringify({ type: 'stop' })); } catch {}
     session.ws.close();
@@ -335,10 +386,20 @@ async function loadConfig() {
   if (state.selectedScript) {
     state.selectedScript = state.config.scripts.find((s) => s.id === state.selectedScript.id) || null;
   }
+  // 首次加载时，从 hash 恢复选中脚本
+  if (state._pendingScriptId) {
+    const found = state.config.scripts.find((s) => s.id === state._pendingScriptId);
+    if (found) {
+      state.selectedScript = found;
+      $('selectedTitle').textContent = found.name;
+    }
+    state._pendingScriptId = '';
+  }
   if (isSearchActive()) refreshSearchResults();
   renderGroups();
   renderScripts();
   renderSelected();
+  updateHash();
 }
 
 function currentScripts() {
@@ -507,6 +568,7 @@ function renderGroups() {
   all.onclick = () => {
     clearSearch();
     state.currentGroup = 'all';
+    updateHash();
     renderGroups();
     renderScripts();
   };
@@ -528,6 +590,7 @@ function renderGroups() {
     button.onclick = () => {
       clearSearch();
       state.currentGroup = group.id;
+      updateHash();
       renderGroups();
       renderScripts();
     };
@@ -552,6 +615,7 @@ function renderGroups() {
       if (!confirmed) return;
       await api(`/api/groups/${group.id}`, { method: 'DELETE' });
       state.currentGroup = 'all';
+      updateHash();
       await loadConfig();
     };
 
@@ -584,7 +648,8 @@ function renderScripts() {
   scripts.forEach((script, index) => {
     const card = document.createElement('article');
     const activeSearchResult = searching && index === state.searchIndex;
-    card.className = `script-card ${state.selectedScript?.id === script.id ? 'selected' : ''} ${searching ? 'search-match' : ''} ${activeSearchResult ? 'search-active' : ''}`;
+    const polling = [...state.sessions.values()].some((session) => session.scriptId === script.id && session.polling?.active);
+    card.className = `script-card ${state.selectedScript?.id === script.id ? 'selected' : ''} ${searching ? 'search-match' : ''} ${activeSearchResult ? 'search-active' : ''} ${polling ? 'polling' : ''}`;
     card.dataset.id = script.id;
     card.draggable = !searching;
     if (!searching) {
@@ -603,7 +668,7 @@ function renderScripts() {
 
     card.innerHTML = `
       <div class="script-info">
-        <h2>${searching ? window.ScriptSearch.highlightSearchText(script.name, state.searchQuery) : escapeHtml(script.name)}</h2>
+        <h2>${searching ? window.ScriptSearch.highlightSearchText(script.name, state.searchQuery) : escapeHtml(script.name)}${polling ? '<span class="poll-badge">● 轮询中</span>' : ''}</h2>
         <p class="path">${searching ? window.ScriptSearch.highlightSearchText(script.path, state.searchQuery) : escapeHtml(script.path)}</p>
         ${group}
         ${description}
@@ -618,6 +683,7 @@ function renderScripts() {
       if (action === 'edit') return openScriptDialog(script);
       if (action === 'delete') return deleteScript(script);
       state.selectedScript = script;
+      updateHash();
       if (searching) state.searchIndex = index;
       $('selectedTitle').textContent = script.name;
       renderScripts();
@@ -633,11 +699,12 @@ function renderScripts() {
 function renderSelected() {
   const script = state.selectedScript;
   $('runBtn').disabled = !script;
+  $('pollBtn').disabled = !script;
   $('exploreBtn').disabled = !script;
 
-  // 停止按钮：当前活跃 tab 是否有运行中的 ws
+  // 等待下一轮时没有 WebSocket，但仍需允许用户停止整个轮询。
   const activeSession = state.sessions.get(state.activeTabId);
-  $('stopBtn').disabled = !activeSession?.ws;
+  $('stopBtn').disabled = !activeSession?.ws && !activeSession?.polling?.active;
   syncCopyOutputButton();
 }
 
@@ -685,6 +752,7 @@ function runSelected() {
         renderSelected();
       } else if (msg.type === 'data') {
         appendTerminalData(tabId, session, msg.data);
+        sendPollingInput(tabId, session, msg.data);
       } else if (msg.type === 'exit') {
         const exitMsg = `\n脚本已退出，退出码: ${msg.code}`;
         session.output += exitMsg;
@@ -739,21 +807,251 @@ function runSelected() {
   };
 }
 
+// ── 轮询运行 ──────────────────────────────────────────────
+function formatDuration(ms) {
+  if (ms >= 3600000 && ms % 3600000 === 0) return `${ms / 3600000} 小时`;
+  if (ms >= 60000 && ms % 60000 === 0) return `${ms / 60000} 分钟`;
+  return `${Math.round(ms / 1000)} 秒`;
+}
+
+function cancelPolling(session, message = '') {
+  if (!session?.polling) return;
+  session.polling.active = false;
+  clearTimeout(session.polling.timer);
+  session.polling.timer = null;
+  if (message) session.output += `\n[轮询] ${message}\n`;
+}
+
+function appendPollingStatus(tabId, session, text) {
+  session.output += `\n[轮询] ${text}\n`;
+  if (state.activeTabId === tabId) renderTerminalOutput(session);
+}
+
+function finishPolling(tabId, session, text) {
+  cancelPolling(session);
+  appendPollingStatus(tabId, session, text);
+  renderRunTabs();
+  renderScripts();
+  renderSelected();
+}
+
+function isAutoContinuePrompt(text) {
+  return /(?:按.*(?:回车|enter|任意键).*(?:继续|确认|退出)|(?:继续|确认|退出).*(?:按.*(?:回车|enter|任意键))|press\s+(?:enter|any key).*(?:continue|confirm|exit)|(?:continue|confirm|exit).*press\s+(?:enter|any key))/i.test(String(text || ''));
+}
+
+function isInputPrompt(text) {
+  return /(?:请输入|请输出|输入.*(?:：|:|\?)|选择.*(?:：|:|\?)|read-host|\binput\b)/i.test(String(text || ''));
+}
+
+function sendPollingInput(tabId, session, promptText) {
+  const polling = session.polling;
+  if (!polling?.active || !session.ws) return;
+  const autoContinue = isAutoContinuePrompt(promptText);
+  if (!autoContinue && (!polling.pendingInputs.length || !isInputPrompt(promptText))) return;
+  const value = autoContinue ? '' : polling.pendingInputs.shift();
+  try {
+    session.ws.send(JSON.stringify({ type: 'input', data: `${value}\n` }));
+    appendPollingStatus(tabId, session, autoContinue ? '自动确认/继续/退出：已发送回车。' : `自动输入：${value || '（回车）'}`);
+  } catch {}
+}
+
+function schedulePollingRun(tabId, session) {
+  const polling = session.polling;
+  if (!polling?.active || polling.timer) return;
+  const remaining = polling.endAt - Date.now();
+  if (remaining <= 0) {
+    finishPolling(tabId, session, `总时长已到，共运行 ${polling.runCount} 次。`);
+    return;
+  }
+  const wait = Math.min(polling.intervalMs, remaining);
+  appendPollingStatus(tabId, session, `第 ${polling.runCount} 次结束，${formatDuration(wait)} 后运行下一次。`);
+  polling.timer = setTimeout(() => {
+    polling.timer = null;
+    if (!polling.active || Date.now() >= polling.endAt) {
+      finishPolling(tabId, session, `总时长已到，共运行 ${polling.runCount} 次。`);
+      return;
+    }
+    runPollingIteration(tabId, session);
+  }, wait);
+  renderRunTabs();
+  renderSelected();
+}
+
+function runPollingIteration(tabId, session) {
+  const polling = session.polling;
+  if (!polling?.active) return;
+  polling.runCount += 1;
+  polling.pendingInputs = [...polling.inputs];
+  appendPollingStatus(tabId, session, `开始第 ${polling.runCount} 次运行：${session.scriptName}。`);
+
+  const wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
+  const ws = new WebSocket(`${wsProtocol}://${location.host}/ws?script=${encodeURIComponent(session.scriptId)}`);
+  session.ws = ws;
+  renderRunTabs();
+  renderSelected();
+
+  ws.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(event.data);
+      if (msg.type === 'ready') {
+        session.wsToken = msg.token;
+        if (state.activeTabId === tabId) $('stdinInput').disabled = false;
+      } else if (msg.type === 'data') {
+        appendTerminalData(tabId, session, msg.data);
+        sendPollingInput(tabId, session, msg.data);
+      } else if (msg.type === 'exit') {
+        session.output += `\n脚本已退出，退出码: ${msg.code}`;
+        session.ws = null;
+        session.wsToken = null;
+        if (state.activeTabId === tabId) $('stdinInput').disabled = true;
+        schedulePollingRun(tabId, session);
+      } else if (msg.type === 'error') {
+        session.output += `\n错误: ${msg.message}`;
+        session.ws = null;
+        session.wsToken = null;
+        if (state.activeTabId === tabId) $('stdinInput').disabled = true;
+        schedulePollingRun(tabId, session);
+      }
+      if (state.activeTabId === tabId) renderTerminalOutput(session);
+    } catch {}
+  };
+  ws.onerror = () => {
+    session.output += '\nWebSocket 连接失败';
+    if (state.activeTabId === tabId) renderTerminalOutput(session);
+  };
+  ws.onclose = () => {
+    if (session.ws === ws) {
+      session.ws = null;
+      session.wsToken = null;
+      if (polling.active && session.ws === null) schedulePollingRun(tabId, session);
+    }
+  };
+}
+
+function attachPollingJob(job) {
+  if ([...state.sessions.values()].some((session) => session.polling?.jobId === job.id)) return;
+  const tabId = createTabId();
+  const session = {
+    scriptId: job.scriptId, scriptName: job.scriptName, ws: null, wsToken: null,
+    output: job.output || `[轮询] ${job.scriptName}\n`,
+    polling: { active: job.active, jobId: job.id }
+  };
+  state.sessions.set(tabId, session);
+  state.activeTabId = tabId;
+  const protocol = location.protocol === 'https:' ? 'wss' : 'ws';
+  const ws = new WebSocket(`${protocol}://${location.host}/ws?poll=${encodeURIComponent(job.id)}`);
+  session.ws = ws;
+  ws.onmessage = (event) => {
+    try {
+      const message = JSON.parse(event.data);
+      if (!message.job) return;
+      session.output = message.job.output || session.output;
+      session.polling.active = Boolean(message.job.active);
+      if (state.activeTabId === tabId) renderTerminalOutput(session);
+      renderRunTabs(); renderScripts(); renderSelected();
+    } catch {}
+  };
+  ws.onclose = () => {
+    session.ws = null;
+    if (state.activeTabId === tabId) $('stdinInput').disabled = true;
+    renderRunTabs(); renderSelected();
+  };
+  renderTerminalOutput(session);
+  renderRunTabs(); renderScripts(); renderSelected();
+}
+
+async function restorePollingJobs() {
+  const jobs = await api('/api/polls');
+  jobs.forEach(attachPollingJob);
+}
+
+function startPolling(script, intervalMs, durationMs, inputs, inputSourceDescription = '') {
+  const tabId = createTabId();
+  const session = {
+    scriptId: script.id,
+    scriptName: script.name,
+    ws: null,
+    wsToken: null,
+    output: `[轮询] ${script.name}\n间隔：${formatDuration(intervalMs)}；总时长：${formatDuration(durationMs)}\n自动输入：${inputs.length ? `${inputs.length} 项` : '未设置'}${inputSourceDescription ? `（${inputSourceDescription}）` : ''}\n`,
+    polling: { active: true, intervalMs, durationMs, endAt: Date.now() + durationMs, runCount: 0, inputs, pendingInputs: [], timer: null }
+  };
+  state.sessions.set(tabId, session);
+  state.activeTabId = tabId;
+  $('selectedTitle').textContent = script.name;
+  renderTerminalOutput(session);
+  renderRunTabs();
+  renderScripts();
+  renderSelected();
+  runPollingIteration(tabId, session);
+}
+
+function openPollDialog() {
+  const script = state.selectedScript;
+  if (!script) return;
+  $('pollValidation').textContent = '';
+  $('pollDialog').showModal();
+  $('pollInterval').focus();
+}
+
+function parsePollInputs(text) {
+  return String(text || '').split(';').map((value) => value.trim());
+}
+
+async function resolvePollInputSource(source) {
+  const value = String(source || '').trim();
+  if (!value) return { inputs: [], description: '' };
+  // 带分号或换行的内容显然是直接输入，避免把它误当作文件路径。
+  if (/[;\r\n]/.test(value)) return { inputs: parsePollInputs(value), description: '直接填写' };
+  const data = await api('/api/poll-input-source', { method: 'POST', body: JSON.stringify({ path: value }) });
+  if (data.isFile) return { inputs: parsePollInputs(data.content), description: `读取文件：${data.path}` };
+  return { inputs: parsePollInputs(value), description: '直接填写' };
+}
+
+async function submitPollDialog(event) {
+  event.preventDefault();
+  const intervalMs = Number($('pollInterval').value) * Number($('pollIntervalUnit').value);
+  const durationMs = Number($('pollDuration').value) * Number($('pollDurationUnit').value);
+  if (!Number.isFinite(intervalMs) || intervalMs < 1000 || !Number.isFinite(durationMs) || durationMs < 1000) {
+    $('pollValidation').textContent = '间隔时间和总时长必须是大于 0 的有效数值。';
+    return;
+  }
+  if (intervalMs > durationMs) {
+    $('pollValidation').textContent = '间隔时间不能大于总时长。';
+    return;
+  }
+  const script = state.selectedScript;
+  try {
+    const inputSource = await resolvePollInputSource($('pollInputSource').value);
+    if (!script) return;
+    const job = await api('/api/polls', { method: 'POST', body: JSON.stringify({ scriptId: script.id, intervalMs, durationMs, inputs: inputSource.inputs }) });
+    $('pollDialog').close();
+    attachPollingJob(job);
+  } catch (error) {
+    $('pollValidation').textContent = `读取输入文件失败：${error.message}`;
+  }
+}
+
 // ── 停止脚本 ──────────────────────────────────────────────
 function stopSelected() {
   const session = state.sessions.get(state.activeTabId);
   if (!session) return;
+  const wasPolling = Boolean(session.polling?.active);
+  if (session.polling?.jobId) {
+    api(`/api/polls/${session.polling.jobId}/stop`, { method: 'POST' }).catch(() => {});
+  }
+  cancelPolling(session);
   if (session.ws) {
     try { session.ws.send(JSON.stringify({ type: 'stop' })); } catch {}
     session.ws.close();
     session.ws = null;
   }
   session.wsToken = null;
-  const msg = '\n已发送停止信号';
+  const msg = wasPolling ? '\n[轮询] 已停止轮询运行' : '\n已发送停止信号';
   session.output += msg;
   $('terminal').textContent = session.output;
   $('stdinInput').disabled = true;
   renderRunTabs();
+  renderScripts();
   renderSelected();
 }
 
@@ -843,6 +1141,7 @@ async function saveScript(event) {
   });
   $('scriptDialog').close();
   state.selectedScript = saved;
+  updateHash();
   await loadConfig();
 }
 
@@ -854,12 +1153,12 @@ async function deleteScript(script) {
     state.selectedScript = null;
     $('selectedTitle').textContent = '未选择脚本';
   }
+  updateHash();
   await loadConfig();
 }
 
 // ── 面板宽度调整 ──────────────────────────────────────────
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
+function clamp(value, min, max) {  return Math.max(min, Math.min(max, value));
 }
 
 function applyPanelSizes() {
@@ -909,12 +1208,39 @@ function setupPanelResizers() {
 }
 
 // ── 初始化 ────────────────────────────────────────────────
+applyHash();
+
+// 浏览器前进/后退时恢复 hash 对应的状态
+window.addEventListener('popstate', () => {
+  const { group, script } = parseHash();
+  state.currentGroup = group || 'all';
+  clearSearch();
+  if (script) {
+    state._pendingScriptId = script;
+    const found = state.config.scripts?.find((s) => s.id === script);
+    if (found) {
+      state.selectedScript = found;
+      $('selectedTitle').textContent = found.name;
+    }
+  } else {
+    state.selectedScript = null;
+    $('selectedTitle').textContent = '未选择脚本';
+  }
+  renderGroups();
+  renderScripts();
+  renderSelected();
+});
+
 bindDialogBackdrop($('scriptDialog'));
 $('addGroupBtn').onclick = addGroup;
 $('addScriptBtn').onclick = () => openScriptDialog();
 $('cancelScriptBtn').onclick = () => $('scriptDialog').close();
 $('scriptForm').onsubmit = saveScript;
 $('runBtn').onclick = runSelected;
+$('pollBtn').onclick = openPollDialog;
+$('pollForm').onsubmit = submitPollDialog;
+$('cancelPollBtn').onclick = () => $('pollDialog').close();
+bindDialogBackdrop($('pollDialog'));
 $('exploreBtn').onclick = exploreSelected;
 $('stopBtn').onclick = stopSelected;
 $('copyOutputBtn').onclick = copyActiveOutput;
@@ -926,7 +1252,13 @@ setupStdinInput();
 setupPanelResizers();
 syncCopyOutputButton();
 
-loadConfig().catch((error) => {
+loadConfig().then(() => {
+  // 轮询恢复是附加能力：旧服务尚未重启或接口暂不可用时，不能影响主界面加载。
+  return restorePollingJobs().catch((error) => {
+    console.warn('轮询恢复失败：', error);
+    $('terminal').textContent += `\n轮询恢复暂不可用：${error.message}`;
+  });
+}).catch((error) => {
   $('scriptList').innerHTML = `<div class="empty">加载失败：${escapeHtml(error.message)}</div>`;
   $('terminal').textContent = `加载失败: ${error.message}`;
 });
