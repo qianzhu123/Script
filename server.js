@@ -6,8 +6,14 @@ const { spawn, execFile, exec } = require('child_process');
 const WebSocket = require('ws');
 const { writeJsonWithBackup, pruneExpiredBackups } = require('./config-backup.js');
 const { buildRunnerLaunch } = require('./runner-launch.js');
+const { createAutostartManager, DEFAULT_AUTOSTART_SETTINGS } = require('./autostart-manager.js');
 let iconv = null;
 try { iconv = require('iconv-lite'); } catch {}
+// PTY 支持（oh-my-posh 等需要真 TTY）。加载失败时回退旧的管道模式。
+let pty = null;
+try { pty = require('node-pty'); } catch (error) {
+  console.warn(`[pty] node-pty unavailable (${error.message}); falling back to pipe mode.`);
+}
 
 const ROOT = __dirname;
 const PORT = Number(process.env.PORT || 3100);
@@ -204,13 +210,84 @@ function openInExplorer(absolutePath, callback) {
 
 const app = express();
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server, path: '/ws' });
+function isTrustedBrowserOrigin(origin) {
+  if (!origin) return true;
+  try {
+    const url = new URL(origin);
+    const hostname = url.hostname.toLowerCase();
+    const localHost = hostname === '127.0.0.1' || hostname === 'localhost' || hostname === '::1';
+    const expectedPort = String(PORT);
+    const originPort = url.port || (url.protocol === 'https:' ? '443' : '80');
+    return localHost && originPort === expectedPort;
+  } catch {
+    return false;
+  }
+}
+
+const wss = new WebSocket.Server({
+  server,
+  path: '/ws',
+  verifyClient(info, callback) {
+    if (isTrustedBrowserOrigin(info.origin || info.req.headers.origin)) callback(true);
+    else callback(false, 403, 'Forbidden');
+  }
+});
 const processes = new Map();
 // 轮询任务由服务器持有，因此浏览器刷新或临时断开不会停止后续运行。
 const pollJobs = new Map();
 
 app.use(express.json({ limit: '2mb' }));
+app.use((req, res, next) => {
+  if (!isTrustedBrowserOrigin(req.headers.origin)) {
+    return res.status(403).json({ error: '拒绝来自其他网站的本机操作请求。', code: 'UNTRUSTED_ORIGIN' });
+  }
+  next();
+});
 app.use(express.static(path.join(ROOT, 'public')));
+// xterm.js 从 node_modules 提供（本地依赖，无 CDN）。
+app.use('/vendor/xterm', express.static(path.join(ROOT, 'node_modules', '@xterm', 'xterm')));
+app.use('/vendor/xterm-addon-fit', express.static(path.join(ROOT, 'node_modules', '@xterm', 'addon-fit')));
+
+const autostartManager = createAutostartManager({ root: ROOT });
+
+function autostartErrorMessage(error) {
+  const messages = {
+    UAC_CANCELLED: '已取消管理员授权。',
+    ADMIN_REQUIRED: '此操作需要管理员权限。',
+    TASK_NOT_FOUND: 'Windows 启动项不存在，请重新保存。',
+    SCRIPT_NOT_FOUND: '脚本配置不存在。',
+    UNSUPPORTED_PLATFORM: '自启动管理仅支持 Windows。',
+    HELPER_TIMEOUT: 'Windows 任务操作超时。',
+    CURRENT_USER_UNAVAILABLE: '无法识别当前 Windows 用户。'
+  };
+  return messages[error && error.code] || (error && error.message) || 'Windows 启动项操作失败。';
+}
+
+function sendAutostartError(res, error) {
+  const badRequestCodes = new Set(['INVALID_SCRIPT_ID', 'INVALID_SETTINGS', 'INVALID_PATH']);
+  const notFoundCodes = new Set(['SCRIPT_NOT_FOUND', 'TASK_NOT_FOUND']);
+  const status = badRequestCodes.has(error && error.code) ? 400 : notFoundCodes.has(error && error.code) ? 404 : 500;
+  return res.status(status).json({
+    error: autostartErrorMessage(error),
+    code: (error && error.code) || 'AUTOSTART_OPERATION_FAILED'
+  });
+}
+
+function requireRunnableScript(scriptId) {
+  const script = loadConfig().scripts.find((item) => item.id === scriptId);
+  if (!script) {
+    const error = new Error('Script not found.');
+    error.code = 'SCRIPT_NOT_FOUND';
+    throw error;
+  }
+  const absolute = resolveScriptPath(script.path);
+  if (!fs.existsSync(absolute) || !fs.statSync(absolute).isFile()) {
+    const error = new Error(`Script file not found: ${script.path}`);
+    error.code = 'SCRIPT_NOT_FOUND';
+    throw error;
+  }
+  return script;
+}
 
 app.get('/api/config', (_req, res) => {
   try {
@@ -312,13 +389,20 @@ app.put('/api/scripts/:id', (req, res) => {
   } catch (error) { res.status(400).json({ error: error.message }); }
 });
 
-app.delete('/api/scripts/:id', (req, res) => {
-  const config = loadConfig();
-  const before = config.scripts.length;
-  config.scripts = config.scripts.filter((x) => x.id !== req.params.id);
-  if (before === config.scripts.length) return res.status(404).json({ error: 'Script not found.' });
-  saveConfig(config);
-  res.json({ ok: true });
+app.delete('/api/scripts/:id', async (req, res) => {
+  try {
+    const config = loadConfig();
+    const before = config.scripts.length;
+    config.scripts = config.scripts.filter((x) => x.id !== req.params.id);
+    if (before === config.scripts.length) return res.status(404).json({ error: 'Script not found.' });
+    if (await autostartManager.isConfigured(req.params.id)) {
+      await autostartManager.remove(req.params.id);
+    }
+    saveConfig(config);
+    res.json({ ok: true });
+  } catch (error) {
+    return sendAutostartError(res, error);
+  }
 });
 
 app.post('/api/scripts/order', (req, res) => {
@@ -350,7 +434,10 @@ app.post('/api/run/:id', async (req, res) => {
 
 app.post('/api/stop/:token', (req, res) => {
   const child = processes.get(req.params.token);
-  if (child) { child.kill(); processes.delete(req.params.token); }
+  if (child) {
+    if (child.kill) child.kill();
+    processes.delete(req.params.token);
+  }
   res.json({ ok: true });
 });
 
@@ -432,6 +519,61 @@ app.post('/api/polls/:id/stop', (req, res) => {
   res.json(pollJobSnapshot(job));
 });
 
+// Windows startup task management. No task is created until the user saves it explicitly.
+app.get('/api/autostarts', async (_req, res) => {
+  try {
+    res.json({
+      supported: process.platform === 'win32',
+      defaults: DEFAULT_AUTOSTART_SETTINGS,
+      entries: await autostartManager.list()
+    });
+  } catch (error) {
+    return sendAutostartError(res, error);
+  }
+});
+
+app.get('/api/autostarts/:id', async (req, res) => {
+  try {
+    requireRunnableScript(req.params.id);
+    res.json(await autostartManager.get(req.params.id));
+  } catch (error) {
+    return sendAutostartError(res, error);
+  }
+});
+
+app.put('/api/autostarts/:id', async (req, res) => {
+  try {
+    requireRunnableScript(req.params.id);
+    res.json(await autostartManager.upsert(req.params.id, req.body || {}));
+  } catch (error) {
+    return sendAutostartError(res, error);
+  }
+});
+
+app.delete('/api/autostarts/:id', async (req, res) => {
+  try {
+    res.json(await autostartManager.remove(req.params.id));
+  } catch (error) {
+    return sendAutostartError(res, error);
+  }
+});
+
+for (const [action, operation] of [
+  ['enable', 'enable'],
+  ['disable', 'disable'],
+  ['run', 'run'],
+  ['stop', 'stop']
+]) {
+  app.post(`/api/autostarts/:id/${action}`, async (req, res) => {
+    try {
+      requireRunnableScript(req.params.id);
+      res.json(await autostartManager[operation](req.params.id));
+    } catch (error) {
+      return sendAutostartError(res, error);
+    }
+  });
+}
+
 app.get('*', (_req, res) => res.sendFile(path.join(ROOT, 'public', 'index.html')));
 
 // WebSocket：运行脚本并流式输出
@@ -491,12 +633,31 @@ function runScript(script, ws) {
     root: ROOT,
     baseEnv: process.env
   });
-  const child = spawn(launch.command, launch.args, launch.options);
-  child.stdout.on('data', (c) => ws.send(JSON.stringify({ type: 'data', data: decodeOutput(c) })));
-  child.stderr.on('data', (c) => ws.send(JSON.stringify({ type: 'data', data: decodeOutput(c) })));
-  child.on('close', (code) => ws.send(JSON.stringify({ type: 'exit', code })));
-  child.on('error', (error) => ws.send(JSON.stringify({ type: 'error', message: error.message })));
-  return child;
+  if (!pty) {
+    const child = spawn(launch.command, launch.args, launch.options);
+    child.stdout.on('data', (c) => ws.send(JSON.stringify({ type: 'data', data: decodeOutput(c) })));
+    child.stderr.on('data', (c) => ws.send(JSON.stringify({ type: 'data', data: decodeOutput(c) })));
+    child.on('close', (code) => ws.send(JSON.stringify({ type: 'exit', code })));
+    child.on('error', (error) => ws.send(JSON.stringify({ type: 'error', message: error.message })));
+    return child;
+  }
+  // PTY 模式：子进程获得真 TTY，oh-my-posh / cls / 进度条等都能正常渲染。
+  // ANSI 原样透传，由前端 xterm.js 解析。cols/rows 由前端通过 resize 消息同步。
+  try {
+    const term = pty.spawn(launch.command, launch.args, {
+      name: 'xterm-256color',
+      cols: 120,
+      rows: 30,
+      cwd: launch.options.cwd,
+      env: launch.options.env
+    });
+    term.onData((data) => ws.send(JSON.stringify({ type: 'data', data })));
+    term.onExit(({ exitCode }) => ws.send(JSON.stringify({ type: 'exit', code: exitCode })));
+    return term;
+  } catch (error) {
+    ws.send(JSON.stringify({ type: 'error', message: error.message }));
+    return null;
+  }
 }
 
 wss.on('connection', (ws, req) => {
@@ -520,8 +681,17 @@ wss.on('connection', (ws, req) => {
   ws.on('message', (raw) => {
     try {
       const msg = JSON.parse(raw);
-      if (msg.type === 'input' && child && child.stdin.writable) child.stdin.write(String(msg.data || ''));
-      if (msg.type === 'stop' && child) child.kill();
+      if (msg.type === 'input' && child && child.write && !child.killed) child.write(String(msg.data || ''));
+      else if (msg.type === 'input' && child && child.stdin && child.stdin.writable) child.stdin.write(String(msg.data || ''));
+      if (msg.type === 'resize' && child && child.resize) {
+        const cols = Math.max(2, Math.min(500, Number(msg.cols) || 120));
+        const rows = Math.max(2, Math.min(300, Number(msg.rows) || 30));
+        try { child.resize(cols, rows); } catch {}
+      }
+      if (msg.type === 'stop' && child) {
+        if (child.kill) child.kill();
+        else if (child.pid) child.kill();
+      }
     } catch {}
   });
   ws.on('close', () => { if (child && !child.killed) child.kill(); processes.delete(token); });

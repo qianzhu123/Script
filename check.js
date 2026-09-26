@@ -5,7 +5,10 @@ const vm = require('vm');
 const ROOT = __dirname;
 const mustExist = [
   'server.js',
+  'autostart-manager.js',
+  'startup-runner.js',
   'runner-launch.js',
+  'scripts/windows-task-manager.ps1',
   'public/index.html',
   'public/app.js',
   'public/script-search.js',
@@ -25,7 +28,7 @@ for (const rel of mustExist) {
   }
 }
 
-for (const rel of ['server.js', 'runner-launch.js', 'public/app.js', 'public/script-search.js', 'public/run-session-store.js']) {
+for (const rel of ['server.js', 'autostart-manager.js', 'startup-runner.js', 'runner-launch.js', 'public/app.js', 'public/script-search.js', 'public/run-session-store.js']) {
   try {
     new vm.Script(fs.readFileSync(path.join(ROOT, rel), 'utf8'), { filename: rel });
     console.log(`[ OK ] Syntax: ${rel}`);

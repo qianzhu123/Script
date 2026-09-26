@@ -92,15 +92,31 @@ h2 { margin: 0; font-size: 24px; }
 .terminal-tab-close { flex: 0 0 auto; width: 22px; height: 22px; padding: 0; border-radius: 7px; background: transparent; color: #667085; font-size: 18px; line-height: 1; }
 .terminal-tab-close:hover { background: #fee2e2; color: #d92d20; }
 .terminal-wrap { position: relative; }
-.terminal { height: calc(100vh - 370px); overflow: auto; background: #0b1017; color: #d7e0ea; border-radius: 22px; padding: 24px 64px 24px 24px; font: 16px/1.55 Consolas, Monaco, monospace; white-space: pre-wrap; outline: 2px solid transparent; outline-offset: 4px; }
-.terminal:focus { outline-color: rgba(50,120,255,.35); }
-.terminal.terminal-active { cursor: default; }
-.terminal-copy-btn { position: absolute; top: 12px; right: 12px; z-index: 1; width: 38px; height: 38px; padding: 0; border: 1px solid #344054; border-radius: 11px; background: rgba(29, 41, 57, .92); color: #d7e0ea; font-size: 20px; font-weight: 900; line-height: 1; box-shadow: 0 4px 12px rgba(0, 0, 0, .24); transition: background .12s, border-color .12s, color .12s, transform .12s; }
+/* xterm.js 容器：外层保留圆角/底色，内层 .xterm 铺满。
+   右侧 16px 留白只给圆角，滚动条贴容器右缘（按钮浮在最上层不占位）。 */
+.terminal { height: calc(100vh - 370px); overflow: hidden; background: #0b1017; border-radius: 22px; padding: 16px; }
+.terminal .xterm { height: 100%; padding: 8px 8px; }
+.terminal .xterm-viewport { background-color: transparent !important; }
+.terminal .xterm-viewport::-webkit-scrollbar { width: 10px; }
+.terminal .xterm-viewport::-webkit-scrollbar-track { background: transparent; }
+.terminal .xterm-viewport::-webkit-scrollbar-thumb { background: #344054; border-radius: 5px; }
+.terminal-copy-btn { position: absolute; top: 12px; right: 12px; z-index: 2; width: 38px; height: 38px; padding: 0; border: 1px solid #344054; border-radius: 11px; background: rgba(29, 41, 57, .92); color: #d7e0ea; font-size: 20px; font-weight: 900; line-height: 1; box-shadow: 0 4px 12px rgba(0, 0, 0, .24); transition: background .12s, border-color .12s, color .12s, transform .12s; }
 .terminal-copy-btn:hover:not(:disabled) { background: #344054; border-color: #667085; transform: translateY(-1px); }
 .terminal-copy-btn:focus-visible { outline: 2px solid #9fc1ff; outline-offset: 2px; }
 .terminal-copy-btn[data-status="success"] { background: #067647; border-color: #12b76a; color: white; }
 .terminal-copy-btn[data-status="failure"] { background: #b42318; border-color: #f97066; color: white; }
 .terminal-copy-btn:disabled { opacity: .4; }
+.terminal-fullscreen-btn { position: absolute; top: 12px; right: 58px; z-index: 2; width: 38px; height: 38px; padding: 0; border: 1px solid #344054; border-radius: 11px; background: rgba(29, 41, 57, .92); color: #d7e0ea; font-size: 18px; font-weight: 900; line-height: 1; box-shadow: 0 4px 12px rgba(0, 0, 0, .24); transition: background .12s, border-color .12s, color .12s, transform .12s; }
+.terminal-fullscreen-btn:hover { background: #344054; border-color: #667085; transform: translateY(-1px); }
+.terminal-fullscreen-btn:focus-visible { outline: 2px solid #9fc1ff; outline-offset: 2px; }
+.terminal-fullscreen-btn.active { background: #1f66ff; border-color: #9fc1ff; color: white; }
+
+/* ── 终端全屏模式 ─────────────────────────────────────── */
+/* 用原生 Fullscreen API（.terminal-wrap 作为全屏元素），不改动 grid 布局 */
+.terminal-wrap:fullscreen { background: #0b1017; padding: 0; display: flex; flex-direction: column; }
+.terminal-wrap:fullscreen .terminal { flex: 1; min-height: 0; height: auto; border-radius: 0; padding: 24px 20px; }
+.terminal-wrap:fullscreen .terminal-copy-btn { top: 16px; }
+.terminal-wrap:fullscreen .terminal-fullscreen-btn { top: 16px; }
 .terminal-input-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; margin-top: 14px; }
 .terminal-input-row input { min-width: 0; border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px; background: white; color: var(--text); outline: 2px solid transparent; outline-offset: 2px; }
 .terminal-input-row input:focus { outline-color: rgba(50,120,255,.25); border-color: #9fc1ff; }
@@ -118,6 +134,11 @@ dialog::backdrop { background: rgba(15, 23, 42, .38); backdrop-filter: blur(4px)
 .number-unit-field { display: grid; grid-template-columns: minmax(0, 1fr) 92px; gap: 8px; }
 .validation-message { min-height: 20px; margin: 0; color: var(--danger); font-size: 13px; font-weight: 800; }
 .poll-badge { display: inline-flex; align-items: center; gap: 5px; margin-left: 8px; padding: 3px 8px; border-radius: 999px; background: #fff8db; color: #8a5a00; border: 1px solid #f2b42b; font-size: 11px; font-weight: 900; vertical-align: middle; }
+.startup-badge { display: inline-flex; align-items: center; min-height: 22px; margin-left: 8px; padding: 3px 8px; border: 1px solid; border-radius: 999px; font-size: 11px; font-weight: 900; line-height: 1.2; vertical-align: middle; white-space: nowrap; }
+.startup-badge.enabled { color: #067647; background: #ecfdf3; border-color: #6ce9a6; }
+.startup-badge.running { color: #05603a; background: #d1fadf; border-color: #32d583; }
+.startup-badge.disabled, .startup-badge.neutral { color: #475467; background: #f2f4f7; border-color: #d0d5dd; }
+.startup-badge.error { color: #b42318; background: #fef3f2; border-color: #fda29b; }
 .script-card.polling { border-color: #f2b42b; box-shadow: 0 0 0 2px rgba(242,180,43,.14); }
 .run-tab-btn.polling { color: #8a5a00; background: #fff8db; }
 .poll-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #f2b42b; flex-shrink: 0; animation: pulse-dot 1.4s ease-in-out infinite; }
@@ -130,6 +151,29 @@ dialog::backdrop { background: rgba(15, 23, 42, .38); backdrop-filter: blur(4px)
 .dialog-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px; }
 .dialog-actions button { padding: 12px 18px; border-radius: 14px; background: #eef4fb; }
 .dialog-actions .danger-btn { background: #fff1f2; color: #d92d20; border-color: #fecdd3; }
+
+.autostart-dialog { width: min(760px, 94vw); }
+.autostart-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.autostart-heading .startup-badge { margin: 2px 0 0; }
+.dialog-subtitle { margin: 6px 0 0; color: var(--muted); font-weight: 700; overflow-wrap: anywhere; }
+.dialog-form .switch-row { min-height: 54px; flex-direction: row; align-items: center; justify-content: space-between; gap: 20px; padding: 10px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.dialog-form .switch-row input { position: relative; width: 46px; height: 26px; flex: 0 0 46px; margin: 0; padding: 0; appearance: none; border: 1px solid #98a2b3; border-radius: 13px; background: #eaecf0; transition: background .15s, border-color .15s; }
+.dialog-form .switch-row input::after { content: ""; position: absolute; width: 20px; height: 20px; top: 2px; left: 2px; border-radius: 50%; background: white; box-shadow: 0 1px 3px rgba(16,24,40,.3); transition: transform .15s; }
+.dialog-form .switch-row input:checked { background: #12b76a; border-color: #039855; }
+.dialog-form .switch-row input:checked::after { transform: translateX(20px); }
+.autostart-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(160px, .55fr); gap: 14px; }
+.autostart-options { display: flex; gap: 22px; flex-wrap: wrap; }
+.dialog-form .check-row { flex-direction: row; align-items: center; gap: 9px; font-weight: 750; }
+.dialog-form .check-row input { width: 18px; height: 18px; margin: 0; padding: 0; accent-color: #12b76a; }
+.dialog-form .check-row input:disabled + span { color: var(--muted); }
+.autostart-status-list { margin: 2px 0 0; border-top: 1px solid var(--border); }
+.autostart-status-list > div { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 14px; padding: 9px 2px; border-bottom: 1px solid var(--border); }
+.autostart-status-list dt { color: var(--muted); font-size: 13px; font-weight: 800; }
+.autostart-status-list dd { min-width: 0; margin: 0; color: #344054; font: 13px/1.5 Consolas, Monaco, monospace; overflow-wrap: anywhere; }
+.autostart-actions { flex-wrap: wrap; }
+.autostart-actions .action-spacer { flex: 1 1 20px; }
+.autostart-form.busy, .dialog-form.busy { cursor: wait; }
+.dialog-form.busy .autostart-status-list { opacity: .65; }
 
 @media (max-width: 1200px) {
   .layout { grid-template-columns: 260px 8px 1fr; }
@@ -187,6 +231,10 @@ dialog::backdrop { background: rgba(15, 23, 42, .38); backdrop-filter: blur(4px)
   .sidebar, .scripts-panel, .terminal-panel { border-right: 0; border-bottom: 1px solid var(--border); }
   .script-card { grid-template-columns: 1fr; }
   .poll-field-grid { grid-template-columns: 1fr; }
+  .autostart-fields { grid-template-columns: 1fr; }
+  .autostart-actions .action-spacer { display: none; }
+  .autostart-actions { justify-content: flex-start; }
+  .autostart-status-list > div { grid-template-columns: 88px minmax(0, 1fr); }
   .card-actions { justify-content: flex-start; }
   .terminal { height: 360px; }
 }

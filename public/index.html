@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Script Studio</title>
   <link rel="icon" href="/favicon.svg" />
-  <link rel="stylesheet" href="/style.css?v=20260713" />
+  <link rel="stylesheet" href="/style.css?v=20260926" />
+  <link rel="stylesheet" href="/vendor/xterm/css/xterm.css" />
 </head>
 <body>
   <main id="layoutRoot" class="layout">
@@ -45,6 +46,7 @@
           <button id="runBtn" class="primary-btn" disabled>运行</button>
           <button id="pollBtn" class="warning-btn" disabled>轮询运行</button>
           <button id="exploreBtn" class="secondary-btn" disabled>文件夹</button>
+          <button id="autostartBtn" class="secondary-btn" disabled>启动项</button>
           <button id="stopBtn" class="danger-btn" disabled>停止</button>
         </div>
       </div>
@@ -54,8 +56,9 @@
 
       <!-- 终端输出区（每个 tab 共用，切换时替换内容） -->
       <div class="terminal-wrap">
-        <div id="terminal" class="terminal" aria-label="操作输出">选择左侧脚本后，点击「运行」执行，或点击「文件夹」在资源管理器中打开。</div>
+        <div id="terminal" class="terminal" aria-label="操作输出"></div>
         <button id="copyOutputBtn" class="terminal-copy-btn" type="button" title="复制运行结果" aria-label="复制运行结果" disabled>⧉</button>
+        <button id="fullscreenBtn" class="terminal-fullscreen-btn" type="button" title="全屏展示终端" aria-label="全屏展示终端">⛶</button>
       </div>
 
       <!-- 底部 stdin 输入框 -->
@@ -117,6 +120,58 @@
     </form>
   </dialog>
 
+  <dialog id="autostartDialog" class="autostart-dialog">
+    <form id="autostartForm" method="dialog" class="dialog-form">
+      <div class="autostart-heading">
+        <div>
+          <h2>Windows 启动项</h2>
+          <p id="autostartScriptName" class="dialog-subtitle"></p>
+        </div>
+        <span id="autostartStatusBadge" class="startup-badge neutral">未注册</span>
+      </div>
+
+      <label class="switch-row">
+        <span>启用自动启动</span>
+        <input id="autostartEnabled" type="checkbox" role="switch" checked />
+      </label>
+
+      <div class="autostart-fields">
+        <label>触发方式
+          <select id="autostartTrigger">
+            <option value="logon">用户登录后</option>
+            <option value="startup">系统启动时</option>
+          </select>
+        </label>
+        <label>延迟启动（秒）
+          <input id="autostartDelay" type="number" min="0" max="3600" step="1" value="30" required />
+        </label>
+      </div>
+
+      <div class="autostart-options">
+        <label class="check-row"><input id="autostartRestart" type="checkbox" checked /><span>失败后自动重试</span></label>
+        <label class="check-row"><input id="autostartElevated" type="checkbox" /><span>最高权限运行</span></label>
+      </div>
+
+      <dl class="autostart-status-list">
+        <div><dt>任务状态</dt><dd id="autostartState">未注册</dd></div>
+        <div><dt>上次运行</dt><dd id="autostartLastRun">--</dd></div>
+        <div><dt>返回结果</dt><dd id="autostartLastResult">--</dd></div>
+        <div><dt>任务名称</dt><dd id="autostartTaskName">--</dd></div>
+        <div><dt>日志文件</dt><dd id="autostartLogPath">--</dd></div>
+      </dl>
+
+      <p id="autostartValidation" class="validation-message" aria-live="polite"></p>
+      <div class="dialog-actions autostart-actions">
+        <button type="button" id="removeAutostartBtn" class="danger-btn">移除</button>
+        <span class="action-spacer"></span>
+        <button type="button" id="stopAutostartBtn">停止任务</button>
+        <button type="button" id="runAutostartBtn">立即测试</button>
+        <button type="button" id="cancelAutostartBtn">取消</button>
+        <button class="primary-btn" value="default">保存</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="appDialog" class="app-dialog">
     <form id="appDialogForm" method="dialog" class="dialog-form">
       <h2 id="appDialogTitle">提示</h2>
@@ -131,6 +186,8 @@
 
   <script src="/terminal-copy.js?v=20260627"></script>
   <script src="/script-search.js?v=20260627"></script>
-  <script src="/app.js?v=20260713"></script>
+  <script src="/vendor/xterm/lib/xterm.js"></script>
+  <script src="/vendor/xterm-addon-fit/lib/addon-fit.js"></script>
+  <script src="/app.js?v=20260926b"></script>
 </body>
 </html>

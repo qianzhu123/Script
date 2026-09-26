@@ -10,7 +10,17 @@ const state = {
   tabCounter: 0,
   searchQuery: '',
   searchResults: [],
-  searchIndex: -1
+  searchIndex: -1,
+  autostarts: new Map(),
+  autostartDefaults: {
+    trigger: 'logon',
+    delaySeconds: 30,
+    runElevated: false,
+    restartOnFailure: true,
+    enabled: true
+  },
+  autostartSupported: true,
+  autostartScriptId: null
 };
 
 // ── URL hash 路由 ──────────────────────────────────────────
@@ -52,8 +62,72 @@ const $ = (id) => document.getElementById(id);
 const sorted = (items) => [...items].sort((a, b) => (a.order || 0) - (b.order || 0));
 let copyFeedbackTimer = null;
 
+// ── xterm.js 终端实例（ANSI 渲染）──────────────────────────
+const PLACEHOLDER_TEXT = '选择左侧脚本后，点击「运行」执行，或点击「文件夹」在资源管理器中打开。';
+const terminal = new window.Terminal({
+  convertEol: false,
+  cursorBlink: true,
+  fontFamily: '"Cascadia Code", Consolas, Monaco, monospace',
+  fontSize: 16,
+  lineHeight: 1.25,
+  scrollback: 10000,
+  theme: {
+    background: '#0b1017',
+    foreground: '#d7e0ea',
+    cursor: '#9fc1ff'
+  }
+});
+const terminalFit = new window.FitAddon.FitAddon();
+terminal.loadAddon(terminalFit);
+terminal.open($('terminal'));
+terminal.write(`\x1b[90m${PLACEHOLDER_TEXT}\x1b[0m`);
+let terminalDirty = false; // 是否已有真实输出（区别于占位文案）
+
+function terminalWrite(text) {
+  if (!terminalDirty) {
+    terminal.reset();
+    terminalDirty = true;
+  }
+  terminal.write(text);
+}
+
+function terminalReset(text = '') {
+  terminal.reset();
+  terminalDirty = Boolean(text);
+  if (text) terminal.write(text);
+  else terminal.write(`\x1b[90m${PLACEHOLDER_TEXT}\x1b[0m`);
+}
+
+function fitTerminal() {
+  try { terminalFit.fit(); } catch {}
+  const session = state.sessions.get(state.activeTabId);
+  if (session?.ws) {
+    try { session.ws.send(JSON.stringify({ type: 'resize', cols: terminal.cols, rows: terminal.rows })); } catch {}
+  }
+  // 内容超出可视区时滚到底部，保证最后一行（含刚输出的部分行）始终可见
+  scrollTerminalToBottom();
+}
+
+function terminalDimensions() {
+  try { terminalFit.fit(); } catch {}
+  return { cols: terminal.cols, rows: terminal.rows };
+}
+
+window.addEventListener('resize', () => fitTerminal());
+document.addEventListener('fullscreenchange', () => setTimeout(fitTerminal, 60));
+
 function activeSessionOutput() {
-  return state.sessions.get(state.activeTabId)?.output || '';
+  if (state.activeTabId) return state.sessions.get(state.activeTabId)?.output || '';
+  return terminalDirty ? terminalBufferText() : '';
+}
+
+function terminalBufferText() {
+  let text = '';
+  for (let line = 0; line < terminal.buffer.active.length; line++) {
+    text += terminal.buffer.active.getLine(line).translateToString(true);
+    if (line < terminal.buffer.active.length - 1) text += '\n';
+  }
+  return text.replace(/\s+$/g, '');
 }
 
 function syncCopyOutputButton(status = 'idle') {
@@ -326,7 +400,7 @@ function closeRunTab(tabId) {
       switchRunTab(remaining[remaining.length - 1]);
     } else {
       state.activeTabId = null;
-      $('terminal').textContent = '选择左侧脚本后，点击「运行」执行，或点击「文件夹」在资源管理器中打开。';
+      terminalReset();
       $('stdinInput').disabled = true;
       $('selectedTitle').textContent = state.selectedScript ? state.selectedScript.name : '未选择脚本';
     }
@@ -339,18 +413,22 @@ function closeRunTab(tabId) {
 function appendToActiveTab(text) {
   const session = state.sessions.get(state.activeTabId);
   if (session) session.output += text;
-  const el = $('terminal');
-  el.textContent += text;
-  el.scrollTop = el.scrollHeight;
+  terminalWrite(text);
+  scrollTerminalToBottom();
   syncCopyOutputButton();
+}
+
+/** 内容超出可视区时滚到底部，保证最后一行始终可见 */
+function scrollTerminalToBottom() {
+  terminal.scrollToBottom();
+  const viewport = document.querySelector('.terminal .xterm-viewport');
+  if (viewport) viewport.scrollTop = viewport.scrollHeight;
 }
 
 function setActiveTabText(text) {
   const session = state.sessions.get(state.activeTabId);
   if (session) session.output = text;
-  const el = $('terminal');
-  el.textContent = text;
-  el.scrollTop = el.scrollHeight;
+  terminalReset(text);
   syncCopyOutputButton();
 }
 
@@ -369,15 +447,23 @@ function mergeTerminalOutput(output, text) {
 }
 
 function renderTerminalOutput(session) {
-  const el = $('terminal');
-  el.textContent = session?.output || '';
-  el.scrollTop = el.scrollHeight;
+  terminalReset(session?.output || '');
   syncCopyOutputButton();
 }
 
 function appendTerminalData(tabId, session, text) {
   session.output = mergeTerminalOutput(session.output, text);
-  if (state.activeTabId === tabId) renderTerminalOutput(session);
+  if (state.activeTabId !== tabId) return;
+  // 活跃 tab：ANSI 原样写入 xterm（服务端 PTY 模式不剥离转义序列）。
+  // PTY 模式下 xterm 自己处理 \r 覆盖/清屏/颜色，无需前端重渲染。
+  terminalWrite(text);
+  // 部分行写入（无换行结尾）后 xterm 不会自动滚动到最后一行，手动对齐
+  scrollTerminalToBottom();
+  syncCopyOutputButton();
+}
+
+function stripAnsiForCompare(text) {
+  return String(text || '').replace(/\x1b\[[0-9;:;?]*[ -/]*[@-~]/g, '').replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g, '');
 }
 
 // ── 加载配置 ──────────────────────────────────────────────
@@ -400,6 +486,43 @@ async function loadConfig() {
   renderScripts();
   renderSelected();
   updateHash();
+}
+
+function rememberAutostart(entry) {
+  if (!entry?.scriptId) return;
+  if (entry.configured) state.autostarts.set(entry.scriptId, entry);
+  else state.autostarts.delete(entry.scriptId);
+}
+
+async function loadAutostarts() {
+  const data = await api('/api/autostarts');
+  state.autostartSupported = data.supported !== false;
+  if (data.defaults) state.autostartDefaults = { ...state.autostartDefaults, ...data.defaults };
+  state.autostarts = new Map((data.entries || []).map((entry) => [entry.scriptId, entry]));
+  renderScripts();
+  renderSelected();
+}
+
+function autostartStateLabel(entry) {
+  if (!entry?.exists) return entry?.configured ? '任务缺失' : '未注册';
+  const labels = {
+    Ready: '就绪',
+    Running: '运行中',
+    Disabled: '已禁用',
+    Queued: '等待运行',
+    Unknown: '未知'
+  };
+  if (!entry.enabled) return '已禁用';
+  return labels[entry.state] || entry.state || '已注册';
+}
+
+function autostartBadge(entry) {
+  if (!entry?.configured) return '';
+  if (!entry.exists) return '<span class="startup-badge error">启动项异常</span>';
+  if (!entry.enabled) return '<span class="startup-badge disabled">启动项已禁用</span>';
+  if (entry.state === 'Running') return '<span class="startup-badge running">启动项运行中</span>';
+  const label = entry.trigger === 'startup' ? '开机启动' : '登录启动';
+  return `<span class="startup-badge enabled">${label}</span>`;
 }
 
 function currentScripts() {
@@ -649,6 +772,7 @@ function renderScripts() {
     const card = document.createElement('article');
     const activeSearchResult = searching && index === state.searchIndex;
     const polling = [...state.sessions.values()].some((session) => session.scriptId === script.id && session.polling?.active);
+    const startupEntry = state.autostarts.get(script.id);
     card.className = `script-card ${state.selectedScript?.id === script.id ? 'selected' : ''} ${searching ? 'search-match' : ''} ${activeSearchResult ? 'search-active' : ''} ${polling ? 'polling' : ''}`;
     card.dataset.id = script.id;
     card.draggable = !searching;
@@ -668,18 +792,20 @@ function renderScripts() {
 
     card.innerHTML = `
       <div class="script-info">
-        <h2>${searching ? window.ScriptSearch.highlightSearchText(script.name, state.searchQuery) : escapeHtml(script.name)}${polling ? '<span class="poll-badge">● 轮询中</span>' : ''}</h2>
+        <h2>${searching ? window.ScriptSearch.highlightSearchText(script.name, state.searchQuery) : escapeHtml(script.name)}${polling ? '<span class="poll-badge">● 轮询中</span>' : ''}${autostartBadge(startupEntry)}</h2>
         <p class="path">${searching ? window.ScriptSearch.highlightSearchText(script.path, state.searchQuery) : escapeHtml(script.path)}</p>
         ${group}
         ${description}
       </div>
       <div class="card-actions">
+        <button data-action="autostart">启动项</button>
         <button data-action="edit">编辑</button>
         <button data-action="delete" class="danger-outline">删除</button>
       </div>`;
 
     card.onclick = (event) => {
       const action = event.target.dataset.action;
+      if (action === 'autostart') return openAutostartDialog(script);
       if (action === 'edit') return openScriptDialog(script);
       if (action === 'delete') return deleteScript(script);
       state.selectedScript = script;
@@ -701,6 +827,7 @@ function renderSelected() {
   $('runBtn').disabled = !script;
   $('pollBtn').disabled = !script;
   $('exploreBtn').disabled = !script;
+  $('autostartBtn').disabled = !script || !state.autostartSupported;
 
   // 等待下一轮时没有 WebSocket，但仍需允许用户停止整个轮询。
   const activeSession = state.sessions.get(state.activeTabId);
@@ -725,16 +852,22 @@ function runSelected() {
   state.activeTabId = tabId;
 
   renderRunTabs();
-  $('terminal').textContent = session.output;
-  $('terminal').scrollTop = 0;
+  terminalReset(session.output);
   syncCopyOutputButton();
   $('stdinInput').disabled = true;
   $('selectedTitle').textContent = script.name;
 
+  // 先按当前容器尺寸 fit 一次，PTY 尺寸与可见区域一致，避免输出只落在左边窄条
+  fitTerminal();
+
   const ws = new WebSocket(`ws://${location.host}/ws?script=${encodeURIComponent(script.id)}`);
   session.ws = ws;
 
-  ws.onopen = () => appendToActiveTab('已连接\n');
+  ws.onopen = () => {
+    appendToActiveTab('已连接\n');
+    // 连接建立后立刻同步 PTY 尺寸
+    try { ws.send(JSON.stringify({ type: 'resize', cols: terminal.cols, rows: terminal.rows })); } catch {}
+  };
 
   ws.onmessage = (event) => {
     // 只有活跃 tab 才直接渲染，非活跃只存 output
@@ -744,9 +877,10 @@ function runSelected() {
         session.wsToken = msg.token;
         session.output += '脚本已启动\n';
         if (state.activeTabId === tabId) {
-          $('terminal').textContent = session.output;
-          $('terminal').scrollTop = $('terminal').scrollHeight;
+          terminalWrite('脚本已启动\n');
           $('stdinInput').disabled = false;
+          // PTY 重新对齐一次尺寸（此时 xterm 已渲染完成，fit 结果稳定）
+          setTimeout(fitTerminal, 30);
         }
         renderRunTabs();
         renderSelected();
@@ -754,27 +888,23 @@ function runSelected() {
         appendTerminalData(tabId, session, msg.data);
         sendPollingInput(tabId, session, msg.data);
       } else if (msg.type === 'exit') {
-        const exitMsg = `\n脚本已退出，退出码: ${msg.code}`;
+        const exitMsg = `\n\x1b[0m脚本已退出，退出码: ${msg.code}`;
         session.output += exitMsg;
         session.ws = null;
         session.wsToken = null;
         if (state.activeTabId === tabId) {
-          const el = $('terminal');
-          el.textContent += exitMsg;
-          el.scrollTop = el.scrollHeight;
+          terminalWrite(exitMsg);
           $('stdinInput').disabled = true;
         }
         renderRunTabs();
         renderSelected();
       } else if (msg.type === 'error') {
-        const errMsg = `\n错误: ${msg.message}`;
+        const errMsg = `\n\x1b[0m错误: ${msg.message}`;
         session.output += errMsg;
         session.ws = null;
         session.wsToken = null;
         if (state.activeTabId === tabId) {
-          const el = $('terminal');
-          el.textContent += errMsg;
-          el.scrollTop = el.scrollHeight;
+          terminalWrite(errMsg);
           $('stdinInput').disabled = true;
         }
         renderRunTabs();
@@ -784,12 +914,12 @@ function runSelected() {
   };
 
   ws.onerror = () => {
-    const errMsg = '\nWebSocket 连接失败';
+    const errMsg = '\n\x1b[0mWebSocket 连接失败';
     session.output += errMsg;
     session.ws = null;
     session.wsToken = null;
     if (state.activeTabId === tabId) {
-      $('terminal').textContent = session.output;
+      terminalWrite(errMsg);
       $('stdinInput').disabled = true;
     }
     renderRunTabs();
@@ -1048,7 +1178,7 @@ function stopSelected() {
   session.wsToken = null;
   const msg = wasPolling ? '\n[轮询] 已停止轮询运行' : '\n已发送停止信号';
   session.output += msg;
-  $('terminal').textContent = session.output;
+  terminalWrite(msg);
   $('stdinInput').disabled = true;
   renderRunTabs();
   renderScripts();
@@ -1063,13 +1193,212 @@ async function exploreSelected() {
     await api(`/api/explore/${script.id}`, { method: 'POST' });
   } catch (error) {
     // 打开失败才在当前终端提示
-    const el = $('terminal');
     const msg = `\n✗ 打开文件夹失败: ${error.message}\n`;
-    el.textContent += msg;
-    el.scrollTop = el.scrollHeight;
+    terminalWrite(msg);
     const session = state.sessions.get(state.activeTabId);
     if (session) session.output += msg;
     syncCopyOutputButton();
+  }
+}
+
+// ── Windows 启动项 ────────────────────────────────────────
+function formatTaskDate(value) {
+  if (!value) return '--';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '--';
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+  }).format(date);
+}
+
+function formatTaskResult(value) {
+  if (value == null) return '--';
+  const number = Number(value);
+  if (!Number.isFinite(number)) return '--';
+  if (number === 0) return '成功 (0)';
+  if (number === 267011) return '尚未运行 (0x00041303)';
+  const hex = (number >>> 0).toString(16).toUpperCase().padStart(8, '0');
+  return `0x${hex} (${number})`;
+}
+
+function emptyAutostartEntry(scriptId) {
+  return {
+    scriptId,
+    configured: false,
+    settings: null,
+    exists: false,
+    enabled: false,
+    state: null,
+    lastRunTime: null,
+    lastTaskResult: null,
+    taskName: '--',
+    logPath: '--'
+  };
+}
+
+function syncAutostartTrigger() {
+  const elevated = $('autostartElevated');
+  const startup = $('autostartTrigger').value === 'startup';
+  if (startup && !elevated.disabled) {
+    elevated.dataset.logonChecked = elevated.checked ? '1' : '0';
+  }
+  if (startup) {
+    elevated.checked = true;
+    elevated.disabled = true;
+  } else {
+    if (elevated.disabled) elevated.checked = elevated.dataset.logonChecked === '1';
+    elevated.disabled = false;
+  }
+}
+
+function autostartBadgePresentation(entry) {
+  if (!entry?.exists) {
+    return entry?.configured
+      ? { label: '任务缺失', className: 'error' }
+      : { label: '未注册', className: 'neutral' };
+  }
+  if (!entry.enabled) return { label: '已禁用', className: 'disabled' };
+  if (entry.state === 'Running') return { label: '运行中', className: 'running' };
+  return { label: '已启用', className: 'enabled' };
+}
+
+function renderAutostartDialog(entry) {
+  const settings = entry?.settings || state.autostartDefaults;
+  const presentation = autostartBadgePresentation(entry);
+  const badge = $('autostartStatusBadge');
+  badge.textContent = presentation.label;
+  badge.className = `startup-badge ${presentation.className}`;
+
+  $('autostartEnabled').checked = settings.enabled !== false;
+  $('autostartTrigger').value = settings.trigger || 'logon';
+  $('autostartDelay').value = Number.isInteger(settings.delaySeconds) ? settings.delaySeconds : 30;
+  $('autostartRestart').checked = settings.restartOnFailure !== false;
+  $('autostartElevated').disabled = false;
+  $('autostartElevated').checked = Boolean(settings.runElevated);
+  $('autostartElevated').dataset.logonChecked = settings.trigger === 'logon' && settings.runElevated ? '1' : '0';
+  syncAutostartTrigger();
+
+  $('autostartState').textContent = autostartStateLabel(entry);
+  $('autostartLastRun').textContent = formatTaskDate(entry?.lastRunTime);
+  $('autostartLastResult').textContent = formatTaskResult(entry?.lastTaskResult);
+  $('autostartTaskName').textContent = entry?.taskName || '--';
+  $('autostartLogPath').textContent = entry?.logPath || '--';
+  $('removeAutostartBtn').disabled = !entry?.configured && !entry?.exists;
+  $('runAutostartBtn').disabled = !entry?.exists || !entry?.enabled;
+  $('stopAutostartBtn').disabled = !entry?.exists || !['Running', 'Queued'].includes(entry?.state);
+}
+
+function setAutostartBusy(busy, message = '') {
+  const form = $('autostartForm');
+  form.classList.toggle('busy', busy);
+  form.querySelectorAll('input, select, button').forEach((control) => { control.disabled = busy; });
+  if (message) $('autostartValidation').textContent = message;
+}
+
+async function refreshAutostartEntry(scriptId) {
+  const entry = await api(`/api/autostarts/${encodeURIComponent(scriptId)}`);
+  rememberAutostart(entry);
+  renderScripts();
+  renderSelected();
+  return entry;
+}
+
+async function openAutostartDialog(script = state.selectedScript) {
+  if (!script || !state.autostartSupported) return;
+  state.autostartScriptId = script.id;
+  $('autostartScriptName').textContent = script.name;
+  $('autostartValidation').textContent = '';
+  const cached = state.autostarts.get(script.id) || emptyAutostartEntry(script.id);
+  renderAutostartDialog(cached);
+  $('autostartDialog').showModal();
+  setAutostartBusy(true, '正在读取 Windows 任务状态...');
+  try {
+    const entry = await refreshAutostartEntry(script.id);
+    setAutostartBusy(false);
+    $('autostartValidation').textContent = '';
+    renderAutostartDialog(entry);
+  } catch (error) {
+    setAutostartBusy(false);
+    renderAutostartDialog(cached);
+    $('autostartValidation').textContent = `读取失败：${error.message}`;
+  }
+}
+
+async function saveAutostart(event) {
+  event.preventDefault();
+  const scriptId = state.autostartScriptId;
+  if (!scriptId) return;
+  const delaySeconds = Number($('autostartDelay').value);
+  if (!Number.isInteger(delaySeconds) || delaySeconds < 0 || delaySeconds > 3600) {
+    $('autostartValidation').textContent = '延迟时间必须是 0 到 3600 之间的整数。';
+    return;
+  }
+  const body = {
+    enabled: $('autostartEnabled').checked,
+    trigger: $('autostartTrigger').value,
+    delaySeconds,
+    restartOnFailure: $('autostartRestart').checked,
+    runElevated: $('autostartElevated').checked
+  };
+  setAutostartBusy(true, body.trigger === 'startup' || body.runElevated ? '等待管理员授权...' : '正在保存启动项...');
+  try {
+    const entry = await api(`/api/autostarts/${encodeURIComponent(scriptId)}`, {
+      method: 'PUT',
+      body: JSON.stringify(body)
+    });
+    rememberAutostart(entry);
+    renderScripts();
+    renderSelected();
+    $('autostartDialog').close();
+  } catch (error) {
+    setAutostartBusy(false);
+    renderAutostartDialog(state.autostarts.get(scriptId) || emptyAutostartEntry(scriptId));
+    $('autostartValidation').textContent = `保存失败：${error.message}`;
+  }
+}
+
+async function runAutostartOperation(operation, progressText) {
+  const scriptId = state.autostartScriptId;
+  if (!scriptId) return;
+  const cached = state.autostarts.get(scriptId) || emptyAutostartEntry(scriptId);
+  setAutostartBusy(true, progressText);
+  try {
+    let entry = await api(`/api/autostarts/${encodeURIComponent(scriptId)}/${operation}`, { method: 'POST' });
+    rememberAutostart(entry);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    entry = await refreshAutostartEntry(scriptId);
+    setAutostartBusy(false);
+    $('autostartValidation').textContent = '';
+    renderAutostartDialog(entry);
+  } catch (error) {
+    setAutostartBusy(false);
+    renderAutostartDialog(state.autostarts.get(scriptId) || cached);
+    $('autostartValidation').textContent = `操作失败：${error.message}`;
+  }
+}
+
+async function removeAutostart() {
+  const scriptId = state.autostartScriptId;
+  if (!scriptId) return;
+  const confirmed = await openAppDialog({
+    title: '移除启动项',
+    message: '从 Windows 任务计划程序移除此启动项？脚本文件不会被删除。',
+    confirmText: '移除',
+    danger: true
+  });
+  if (!confirmed) return;
+  setAutostartBusy(true, '正在移除启动项...');
+  try {
+    const entry = await api(`/api/autostarts/${encodeURIComponent(scriptId)}`, { method: 'DELETE' });
+    rememberAutostart(entry);
+    renderScripts();
+    renderSelected();
+    $('autostartDialog').close();
+  } catch (error) {
+    setAutostartBusy(false);
+    renderAutostartDialog(state.autostarts.get(scriptId) || emptyAutostartEntry(scriptId));
+    $('autostartValidation').textContent = `移除失败：${error.message}`;
   }
 }
 
@@ -1084,12 +1413,34 @@ function setupStdinInput() {
     $('stdinInput').value = '';
     try {
       session.ws.send(JSON.stringify({ type: 'input', data: text + '\n' }));
-      // 回显输入
-      const echo = `> ${text}\n`;
-      session.output = mergeTerminalOutput(session.output, echo);
-      renderTerminalOutput(session);
+      // PTY 模式下子进程会回显输入（ConPTY 行回显），无需前端手动 echo。
+      // 旧管道模式没有回显，保留一份到 session.output 供复制，但不重复渲染。
+      session.output = mergeTerminalOutput(session.output, `> ${text}\n`);
+      syncCopyOutputButton();
     } catch {}
   });
+}
+
+// ── 终端全屏展示（右上角按钮）──────────────────────────────
+function setupTerminalFullscreen() {
+  const button = $('fullscreenBtn');
+  const wrap = document.querySelector('.terminal-wrap');
+  if (!button || !wrap) return;
+
+  const sync = () => {
+    const active = document.fullscreenElement === wrap;
+    button.classList.toggle('active', active);
+    button.textContent = active ? '⤡' : '⛶';
+    button.title = active ? '退出全屏' : '全屏展示终端';
+    button.setAttribute('aria-label', button.title);
+  };
+
+  button.onclick = () => {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else wrap.requestFullscreen().catch(() => {});
+  };
+  document.addEventListener('fullscreenchange', sync);
+  sync();
 }
 
 // ── 分组管理 ──────────────────────────────────────────────
@@ -1146,7 +1497,11 @@ async function saveScript(event) {
 }
 
 async function deleteScript(script) {
-  const confirmed = await appConfirm('删除脚本', `删除脚本"${script.name}"？`);
+  const hasAutostart = state.autostarts.has(script.id);
+  const message = hasAutostart
+    ? `删除脚本"${script.name}"？关联的 Windows 启动项也会被移除。`
+    : `删除脚本"${script.name}"？`;
+  const confirmed = await appConfirm('删除脚本', message);
   if (!confirmed) return;
   await api(`/api/scripts/${script.id}`, { method: 'DELETE' });
   if (state.selectedScript?.id === script.id) {
@@ -1242,23 +1597,42 @@ $('pollForm').onsubmit = submitPollDialog;
 $('cancelPollBtn').onclick = () => $('pollDialog').close();
 bindDialogBackdrop($('pollDialog'));
 $('exploreBtn').onclick = exploreSelected;
+$('autostartBtn').onclick = () => openAutostartDialog();
 $('stopBtn').onclick = stopSelected;
 $('copyOutputBtn').onclick = copyActiveOutput;
 $('scriptSearchInput').oninput = handleSearchInput;
 $('scriptSearchInput').onkeydown = handleSearchKeydown;
+$('autostartForm').onsubmit = saveAutostart;
+$('autostartTrigger').onchange = syncAutostartTrigger;
+$('cancelAutostartBtn').onclick = () => $('autostartDialog').close();
+$('runAutostartBtn').onclick = () => runAutostartOperation('run', '正在启动计划任务...');
+$('stopAutostartBtn').onclick = () => runAutostartOperation('stop', '正在停止计划任务...');
+$('removeAutostartBtn').onclick = removeAutostart;
+$('autostartDialog').addEventListener('cancel', (event) => {
+  if ($('autostartForm').classList.contains('busy')) event.preventDefault();
+});
 setupScriptPathAutoClean();
 
 setupStdinInput();
 setupPanelResizers();
+setupTerminalFullscreen();
 syncCopyOutputButton();
 
 loadConfig().then(() => {
-  // 轮询恢复是附加能力：旧服务尚未重启或接口暂不可用时，不能影响主界面加载。
-  return restorePollingJobs().catch((error) => {
-    console.warn('轮询恢复失败：', error);
-    $('terminal').textContent += `\n轮询恢复暂不可用：${error.message}`;
-  });
+  // 附加能力失败时保留脚本管理主界面。
+  return Promise.all([
+    restorePollingJobs().catch((error) => {
+      console.warn('轮询恢复失败：', error);
+      terminalWrite(`\n轮询恢复暂不可用：${error.message}`);
+    }),
+    loadAutostarts().catch((error) => {
+      console.warn('启动项状态读取失败：', error);
+      state.autostartSupported = false;
+      renderSelected();
+      terminalWrite(`\n启动项管理暂不可用：${error.message}`);
+    })
+  ]);
 }).catch((error) => {
   $('scriptList').innerHTML = `<div class="empty">加载失败：${escapeHtml(error.message)}</div>`;
-  $('terminal').textContent = `加载失败: ${error.message}`;
+  terminalReset(`加载失败: ${error.message}`);
 });
