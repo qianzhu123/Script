@@ -93,9 +93,11 @@ h2 { margin: 0; font-size: 24px; }
 .terminal-tab-close:hover { background: #fee2e2; color: #d92d20; }
 .terminal-wrap { position: relative; }
 /* xterm.js 容器：外层保留圆角/底色，内层 .xterm 铺满。
-   右侧 16px 留白只给圆角，滚动条贴容器右缘（按钮浮在最上层不占位）。 */
-.terminal { height: calc(100vh - 370px); overflow: hidden; background: #0b1017; border-radius: 22px; padding: 16px; }
-.terminal .xterm { height: 100%; padding: 8px 8px; }
+   注意：FitAddon 计算 rows 时只减 .xterm 自身的 padding，不会减 .terminal 的垂直 padding。
+   .terminal 若有垂直 padding，screen 会比可视区高出一行 → 最后一行被裁掉。
+   因此垂直间距全部交给 .xterm 的 padding，.terminal 只留水平 padding。 */
+.terminal { height: calc(100vh - 370px); overflow: hidden; background: #0b1017; border-radius: 22px; padding: 0 16px; }
+.terminal .xterm { height: 100%; padding: 10px 8px; }
 .terminal .xterm-viewport { background-color: transparent !important; }
 .terminal .xterm-viewport::-webkit-scrollbar { width: 10px; }
 .terminal .xterm-viewport::-webkit-scrollbar-track { background: transparent; }
@@ -114,7 +116,7 @@ h2 { margin: 0; font-size: 24px; }
 /* ── 终端全屏模式 ─────────────────────────────────────── */
 /* 用原生 Fullscreen API（.terminal-wrap 作为全屏元素），不改动 grid 布局 */
 .terminal-wrap:fullscreen { background: #0b1017; padding: 0; display: flex; flex-direction: column; }
-.terminal-wrap:fullscreen .terminal { flex: 1; min-height: 0; height: auto; border-radius: 0; padding: 24px 20px; }
+.terminal-wrap:fullscreen .terminal { flex: 1; min-height: 0; height: auto; border-radius: 0; padding: 0 20px; }
 .terminal-wrap:fullscreen .terminal-copy-btn { top: 16px; }
 .terminal-wrap:fullscreen .terminal-fullscreen-btn { top: 16px; }
 .terminal-input-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; margin-top: 14px; }

@@ -115,6 +115,10 @@ function terminalDimensions() {
 
 window.addEventListener('resize', () => fitTerminal());
 document.addEventListener('fullscreenchange', () => setTimeout(fitTerminal, 60));
+// 容器尺寸变化（面板拖动、布局变化、初次渲染）时自动 fit，
+// 否则 terminal.rows 停在 open 时的旧值，最后一行会被裁掉。
+const terminalResizeObserver = new ResizeObserver(() => fitTerminal());
+terminalResizeObserver.observe($('terminal'));
 
 function activeSessionOutput() {
   if (state.activeTabId) return state.sessions.get(state.activeTabId)?.output || '';
