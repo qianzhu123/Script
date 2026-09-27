@@ -95,6 +95,28 @@ terminal.open($('terminal'));
 terminal.write(`\x1b[90m${PLACEHOLDER_TEXT}\x1b[0m`);
 let terminalDirty = false; // 是否已有真实输出（区别于占位文案）
 
+// ── 终端内直接输入 ─────────────────────────────────────────
+// xterm 的 onData 给出按键的原始字节（含 \r、方向键、Ctrl+C 等转义序列），
+// 原样转发给 PTY 即可；回显由 PTY 自己负责，前端不做本地 echo，否则会重复。
+// 没有活跃会话时禁用输入，避免光标闪烁误导可以打字。
+terminal.options.disableStdin = true;
+
+function sendTerminalInput(data) {
+  const session = state.sessions.get(state.activeTabId);
+  if (!session?.ws || session.ws.readyState !== WebSocket.OPEN) return;
+  try {
+    session.ws.send(JSON.stringify({ type: 'input', data }));
+  } catch {}
+}
+
+terminal.onData(sendTerminalInput);
+
+/** 没有可写会话时禁用终端输入。 */
+function syncTerminalInputState() {
+  const session = state.sessions.get(state.activeTabId);
+  terminal.options.disableStdin = !session?.ws;
+}
+
 function terminalWrite(text) {
   if (!terminalDirty) {
     terminal.reset();
@@ -397,6 +419,8 @@ function switchRunTab(tabId) {
 
   renderRunTabs();
   renderSelected();
+  // 切到某个会话后把键盘焦点交给终端，直接敲字即可输入。
+  if (session.ws) terminal.focus();
 }
 
 /** 关闭 tab：先停止 ws，再移除 */
@@ -850,6 +874,7 @@ function renderSelected() {
   // 等待下一轮时没有 WebSocket，但仍需允许用户停止整个轮询。
   const activeSession = state.sessions.get(state.activeTabId);
   $('stopBtn').disabled = !activeSession?.ws && !activeSession?.polling?.active;
+  syncTerminalInputState();
   syncCopyOutputButton();
 }
 
@@ -891,7 +916,7 @@ function openInteractiveTerminal() {
         session.wsToken = msg.token;
         if (state.activeTabId === tabId) {
           terminalReset('');
-          setTimeout(fitTerminal, 30);
+          setTimeout(() => { fitTerminal(); terminal.focus(); }, 30);
         }
         renderRunTabs();
         renderSelected();
@@ -1026,8 +1051,8 @@ function runSelected() {
         if (state.activeTabId === tabId) {
           terminalWrite('脚本已启动\n');
           $('stdinInput').disabled = false;
-          // PTY 重新对齐一次尺寸（此时 xterm 已渲染完成，fit 结果稳定）
-          setTimeout(fitTerminal, 30);
+          // PTY 重新对齐一次尺寸（此时 xterm 已渲染完成，fit 结果稳定），并把焦点给终端
+          setTimeout(() => { fitTerminal(); terminal.focus(); }, 30);
         }
         renderRunTabs();
         renderSelected();
@@ -1592,6 +1617,18 @@ function setupTerminalFullscreen() {
   sync();
 }
 
+/** 点击终端区域即聚焦，键盘输入直接进终端。 */
+function setupTerminalFocus() {
+  const wrap = document.querySelector('.terminal-wrap');
+  wrap.addEventListener('mousedown', (event) => {
+    // 让按钮保持自身行为，不抢焦点。
+    if (event.target.closest('button')) return;
+    // 阻止默认行为，避免焦点被 xterm 的 textarea 抢走后又被浏览器 blur。
+    event.preventDefault();
+    terminal.focus();
+  });
+}
+
 // ── 分组管理 ──────────────────────────────────────────────
 async function addGroup() {
   const name = await appPrompt('请输入分组名称');
@@ -1765,6 +1802,7 @@ setupScriptPathAutoClean();
 setupStdinInput();
 setupPanelResizers();
 setupTerminalFullscreen();
+setupTerminalFocus();
 syncCopyOutputButton();
 
 $('newTerminalBtn').onclick = openInteractiveTerminal;
