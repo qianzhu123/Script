@@ -1,5 +1,5 @@
 
-$src = "D:\code\myweb\daily"
+$src = "D:\code\myweb\script-studio"
 $git = "D:\tools\Productivity\AI_Tools\AI\Cherry-studio\Cherry Studio\codemywebdaily"
 
 Copy-Item "$src\server.js" "$git\server.js" -Force

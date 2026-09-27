@@ -20,7 +20,7 @@ lines.push('');
 lines.push('pause');
 
 fs.appendFileSync(
-  'D:/code/myweb/daily/ps1/animejs-installer.ps1',
+  'D:/code/myweb/script-studio/ps1/animejs-installer.ps1',
   '\r\n' + lines.join('\r\n'),
   'utf8'
 );

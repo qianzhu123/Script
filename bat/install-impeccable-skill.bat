@@ -7,7 +7,7 @@ REM install-impeccable-skill.bat "D:\path\to\project"
 REM If no argument is provided, the script will prompt for the project root.
 REM
 REM This BAT wrapper delegates the real installation work to the PowerShell
-REM script in D:\code\myweb\daily\ps1. It does not require unzip and does not
+REM script in D:\code\myweb\script-studio\ps1. It does not require unzip and does not
 REM install system packages.
 
 set "PROJECT_DIR=%~1"
@@ -26,7 +26,7 @@ if not exist "%PROJECT_DIR%\" (
  exit /b 1
 )
 
-set "PS_SCRIPT=D:\code\myweb\daily\ps1\install-impeccable-skill.ps1"
+set "PS_SCRIPT=D:\code\myweb\script-studio\ps1\install-impeccable-skill.ps1"
 
 if not exist "%PS_SCRIPT%" (
  echo [ERROR] PowerShell installer:

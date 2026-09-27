@@ -99,5 +99,5 @@ Write-Host '========================================' -ForegroundColor Green
 
 Read-Host`;
 
-fs.writeFileSync('D:/code/myweb/daily/ps1/install-animejs.ps1', ps1, 'utf8');
+fs.writeFileSync('D:/code/myweb/script-studio/ps1/install-animejs.ps1', ps1, 'utf8');
 console.log('PS1 written OK');

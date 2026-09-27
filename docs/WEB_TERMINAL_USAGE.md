@@ -13,13 +13,13 @@
 - 支持新建空终端。
 - 支持结束、清屏、适配终端尺寸。
 - 添加脚本弹窗：可从候选脚本选择，或粘贴脚本内容创建。
-- 运行日志保存到 `D:\code\myweb\daily\logs`。
-- 运行历史保存到 `D:\code\myweb\daily\logs\history.json`。
+- 运行日志保存到 `D:\code\myweb\script-studio\logs`。
+- 运行历史保存到 `D:\code\myweb\script-studio\logs\history.json`。
 
 ## 启动
 
 ```bat
-cd /d D:\code\myweb\daily
+cd /d D:\code\myweb\script-studio
 npm install
 npm start
 ```
@@ -27,7 +27,7 @@ npm start
 或双击：
 
 ```text
-D:\code\myweb\daily\start.bat
+D:\code\myweb\script-studio\start.bat
 ```
 
 访问：

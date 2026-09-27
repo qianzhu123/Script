@@ -1,6 +1,6 @@
 # Daily Web Terminal 开发文档
 
-> 目标：把现有 `D:\code\myweb\daily` 从“按钮式脚本控制台”升级为“本机 Web 终端 + 脚本管理平台”。
+> 目标：把现有 `D:\code\myweb\script-studio` 从“按钮式脚本控制台”升级为“本机 Web 终端 + 脚本管理平台”。
 >
 > 核心原则：尽量不破坏原 bat/ps1 使用习惯；网页端能像真实 CMD/PowerShell 一样交互输入、查看实时输出、处理 pause/set /p/菜单类脚本。
 
@@ -168,7 +168,7 @@ Vite + React + TypeScript + xterm.js + Zustand + Tailwind CSS
 ## 4. 系统架构
 
 ```text
-D:\code\myweb\daily
+D:\code\myweb\script-studio
 ├─ server.js / server/
 │  ├─ api scripts
 │  ├─ websocket terminal

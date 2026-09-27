@@ -1,4 +1,4 @@
-$src = "D:\code\myweb\daily"
+$src = "D:\code\myweb\script-studio"
 $dst = "D:\tools\Productivity\AI_Tools\AI\Cherry-studio\Cherry Studio\codemywebdaily"
 
 # create public Directory

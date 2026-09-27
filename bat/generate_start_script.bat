@@ -3,7 +3,7 @@ setlocal EnableExtensions
 
 rem automaticStartscript 
 rem projectlocalPowerShellscript:
-rem D:\code\myweb\daily\ps1\generate_start_script.ps1
+rem D:\code\myweb\script-studio\ps1\generate_start_script.ps1
 
 set "PS1_SCRIPT=%~dp0..\ps1\generate_start_script.ps1"
 
