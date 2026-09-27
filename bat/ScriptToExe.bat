@@ -74,5 +74,5 @@ if "%EXIT_CODE%"=="0" (
 ) else (
  echo [FAILED] Convert failed, exit code: %EXIT_CODE%
 )
-if /i not "%DAILY_WEB_TERMINAL%"=="1" if /i not "%DAILY_WEB_NO_PAUSE%"=="1" pause
+if /i not "%SCRIPT_STUDIO_WEB_TERMINAL%"=="1" if /i not "%SCRIPT_STUDIO_WEB_NO_PAUSE%"=="1" pause
 exit /b %EXIT_CODE%

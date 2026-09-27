@@ -3,11 +3,11 @@ setlocal EnableExtensions EnableDelayedExpansion
 chcp 65001 >nul 2>nul
 set "SCRIPT_DIR=%~dp0"
 for %%I in ("%SCRIPT_DIR%..") do set "PROJECT_DIR=%%~fI"
-if not defined DAILY_PROJECT_DIR set "DAILY_PROJECT_DIR=%PROJECT_DIR%"
-if not defined DAILY_OUTPUT_DIR set "DAILY_OUTPUT_DIR=%PROJECT_DIR%\output"
-if not defined DAILY_TEMP_DIR set "DAILY_TEMP_DIR=%PROJECT_DIR%\temp"
-set "MD_OUTPUT_DIR=%DAILY_OUTPUT_DIR%\markdown"
-set "MD_TEMP_DIR=%DAILY_TEMP_DIR%\markdown"
+if not defined SCRIPT_STUDIO_PROJECT_DIR set "SCRIPT_STUDIO_PROJECT_DIR=%PROJECT_DIR%"
+if not defined SCRIPT_STUDIO_OUTPUT_DIR set "SCRIPT_STUDIO_OUTPUT_DIR=%PROJECT_DIR%\output"
+if not defined SCRIPT_STUDIO_TEMP_DIR set "SCRIPT_STUDIO_TEMP_DIR=%PROJECT_DIR%\temp"
+set "MD_OUTPUT_DIR=%SCRIPT_STUDIO_OUTPUT_DIR%\markdown"
+set "MD_TEMP_DIR=%SCRIPT_STUDIO_TEMP_DIR%\markdown"
 if not exist "%MD_OUTPUT_DIR%" mkdir "%MD_OUTPUT_DIR%" >nul 2>nul
 if not exist "%MD_TEMP_DIR%" mkdir "%MD_TEMP_DIR%" >nul 2>nul
 cd /d "%SCRIPT_DIR%"
@@ -50,7 +50,7 @@ for %%I in ("!SOURCE!") do (
 )
 rem If input is already inside this project, keep output next to it. Otherwise route output to project output\markdown.
 set "OUTPUT_DIR=!SRC_DIR!"
-echo !SRC_FULL!| findstr /i /b /c:"%DAILY_PROJECT_DIR%" >nul 2>nul
+echo !SRC_FULL!| findstr /i /b /c:"%SCRIPT_STUDIO_PROJECT_DIR%" >nul 2>nul
 if errorlevel 1 set "OUTPUT_DIR=%MD_OUTPUT_DIR%\"
 set "OUTPUT=!OUTPUT_DIR!!SRC_NAME!.md"
 call :unique_output OUTPUT
@@ -117,9 +117,9 @@ exit /b 0
 :FAIL
 echo.
 echo convertFailed.
-if /i not "%DAILY_WEB_TERMINAL%"=="1" if /i not "%DAILY_WEB_NO_PAUSE%"=="1" pause
+if /i not "%SCRIPT_STUDIO_WEB_TERMINAL%"=="1" if /i not "%SCRIPT_STUDIO_WEB_NO_PAUSE%"=="1" pause
 exit /b 1
 :OK
 echo.
-if /i not "%DAILY_WEB_TERMINAL%"=="1" if /i not "%DAILY_WEB_NO_PAUSE%"=="1" pause
+if /i not "%SCRIPT_STUDIO_WEB_TERMINAL%"=="1" if /i not "%SCRIPT_STUDIO_WEB_NO_PAUSE%"=="1" pause
 exit /b 0

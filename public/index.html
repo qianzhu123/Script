@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Script Studio</title>
   <link rel="icon" href="/favicon.svg" />
-  <link rel="stylesheet" href="/style.css?v=20260926" />
+  <link rel="stylesheet" href="/style.css?v=20260927" />
   <link rel="stylesheet" href="/vendor/xterm/css/xterm.css" />
 </head>
 <body>
@@ -29,7 +29,14 @@
           <input id="scriptSearchInput" type="search" placeholder="搜索名称、说明、路径或分组" autocomplete="off" />
           <span id="scriptSearchCount" class="search-count">0 / 0</span>
         </label>
-        <button id="addScriptBtn" class="secondary-btn">新增脚本</button>
+        <div class="panel-header-actions">
+          <label class="theme-picker" title="交互式终端使用的 oh-my-posh 主题">
+            <span class="theme-picker-label">主题</span>
+            <select id="themeSelect" aria-label="oh-my-posh 主题"></select>
+          </label>
+          <button id="newTerminalBtn" class="secondary-btn" title="新建交互式终端（带 oh-my-posh 提示符）">新建终端</button>
+          <button id="addScriptBtn" class="secondary-btn">新增脚本</button>
+        </div>
       </div>
       <div id="scriptList" class="script-list"></div>
     </section>
@@ -188,6 +195,6 @@
   <script src="/script-search.js?v=20260627"></script>
   <script src="/vendor/xterm/lib/xterm.js"></script>
   <script src="/vendor/xterm-addon-fit/lib/addon-fit.js"></script>
-  <script src="/app.js?v=20260926b"></script>
+  <script src="/app.js?v=20260927"></script>
 </body>
 </html>

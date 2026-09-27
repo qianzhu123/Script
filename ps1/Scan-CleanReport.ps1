@@ -6,7 +6,7 @@ param(
   [Parameter(Mandatory=$true)]
   [string]$ReportPath,
 
-  [string]$TempDir = $env:DAILY_TEMP_DIR,
+  [string]$TempDir = $env:SCRIPT_STUDIO_TEMP_DIR,
 
   [int]$TopCandidateCount = 200,
 

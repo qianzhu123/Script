@@ -6,6 +6,12 @@ function buildRunnerLaunch({ absolutePath, shellName, root, baseEnv }) {
   const env = {
     ...baseEnv,
     SCRIPT_STUDIO_ROOT: root,
+    // 脚本在网页终端里运行：跳过 pause，避免等待用户按键卡住。
+    // 历史上脚本判断的 DAILY_WEB_NO_PAUSE / DAILY_WEB_TERMINAL 从未被设置过，
+    // 这些变量现在由这里（脚本运行）和 server.js 的交互式终端统一注入。
+    SCRIPT_STUDIO_WEB_TERMINAL: '1',
+    SCRIPT_STUDIO_WEB_NO_PAUSE: '1',
+    SCRIPT_STUDIO_PROJECT_DIR: root,
     PYTHONIOENCODING: 'utf-8',
     PYTHONUTF8: '1',
     PYTHONUNBUFFERED: '1'

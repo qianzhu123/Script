@@ -20,6 +20,8 @@ const PORT = Number(process.env.PORT || 3100);
 const CONFIG_DIR = path.join(ROOT, 'config');
 const SCRIPT_CONFIG = path.join(CONFIG_DIR, 'scripts.json');
 const EXAMPLE_CONFIG = path.join(CONFIG_DIR, 'scripts.example.json');
+const SETTINGS_CONFIG = path.join(CONFIG_DIR, 'settings.json');
+const THEMES_DIR = path.join(ROOT, 'themes');
 const BACKUP_DIR = path.join(ROOT, 'backup');
 
 function ensureDir(dir) { fs.mkdirSync(dir, { recursive: true }); }
@@ -184,6 +186,110 @@ function saveConfig(config) {
   });
 }
 
+// ── 应用设置（交互式终端主题等） ─────────────────────────────
+function defaultSettings() {
+  return {
+    // 交互式终端（"新建终端"）使用的 oh-my-posh 主题名，空串表示不用主题。
+    terminalTheme: 'blue-owl'
+  };
+}
+
+function normalizeSettings(raw) {
+  const base = defaultSettings();
+  if (!raw || typeof raw !== 'object') return base;
+  const theme = typeof raw.terminalTheme === 'string' ? raw.terminalTheme.trim() : base.terminalTheme;
+  return { ...base, terminalTheme: theme };
+}
+
+function loadSettings() {
+  return normalizeSettings(readJson(SETTINGS_CONFIG, null));
+}
+
+function saveSettings(settings) {
+  const normalized = normalizeSettings(settings);
+  writeJsonWithBackup({
+    sourcePath: SETTINGS_CONFIG,
+    backupDir: BACKUP_DIR,
+    data: normalized
+  });
+  return normalized;
+}
+
+/** 列出 themes/ 下的可用主题（文件名去掉 .omp.json / .omp.yaml）。 */
+function listThemes() {
+  let files = [];
+  try {
+    files = fs.readdirSync(THEMES_DIR);
+  } catch {
+    return [];
+  }
+  return files
+    .filter((name) => /\.omp\.(json|yaml)$/i.test(name))
+    .map((name) => ({ name: name.replace(/\.omp\.(json|yaml)$/i, ''), file: name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** 把主题名解析成 themes/ 下的绝对路径；非法或缺失返回 null。 */
+function resolveThemePath(themeName) {
+  const name = String(themeName || '').trim();
+  if (!name) return null;
+  // 只允许主题名，禁止路径穿越。
+  if (!/^[A-Za-z0-9._-]+$/.test(name) || name.includes('..')) return null;
+  for (const ext of ['.omp.json', '.omp.yaml']) {
+    const candidate = path.join(THEMES_DIR, `${name}${ext}`);
+    if (path.dirname(candidate) === THEMES_DIR && fs.existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+/** 找到可用的 oh-my-posh 可执行文件；找不到返回 null。 */
+function resolveOhMyPosh() {
+  const candidates = [
+    process.env.OH_MY_POSH,
+    'C:/Program Files/WindowsApps/ohmyposh.cli_29.14.0.0_x64__96v55e8n804z4/oh-my-posh.exe',
+    'oh-my-posh.exe',
+    'oh-my-posh'
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    if (candidate.includes('/') || candidate.includes('\\')) {
+      if (fs.existsSync(candidate)) return candidate;
+    } else {
+      const found = whichSync(candidate);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+/** 在 PATH 中查找可执行文件（避免为一次查找引入依赖）。 */
+function whichSync(command) {
+  const dirs = String(process.env.PATH || '').split(path.delimiter).filter(Boolean);
+  const exts = String(process.env.PATHEXT || '.EXE;.CMD;.BAT').split(';').filter(Boolean);
+  for (const dir of dirs) {
+    for (const ext of exts) {
+      const candidate = path.join(dir, command + ext.toLowerCase());
+      try {
+        if (fs.existsSync(candidate)) return candidate;
+      } catch {}
+    }
+  }
+  return null;
+}
+
+/** 找到可用的 PowerShell 7（pwsh）；找不到返回 null。 */
+function resolvePwsh() {
+  const candidates = [
+    process.env.PWSH_PATH,
+    'D:/tools/System/PowerShell/7/pwsh.exe',
+    'C:/Program Files/PowerShell/7/pwsh.exe',
+    'D:/Program Files/PowerShell/7/pwsh.exe'
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return whichSync('pwsh');
+}
+
 function cleanupPort(port) {
   return new Promise((resolve) => {
     if (!Number.isInteger(port) || port <= 0 || port > 65535) return resolve([]);
@@ -295,6 +401,34 @@ app.get('/api/config', (_req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// ── 设置与主题 ──────────────────────────────────────────────
+app.get('/api/settings', (_req, res) => {
+  res.json(loadSettings());
+});
+
+app.put('/api/settings', (req, res) => {
+  try {
+    const incoming = req.body || {};
+    if (typeof incoming.terminalTheme === 'string' && incoming.terminalTheme.trim()) {
+      if (!resolveThemePath(incoming.terminalTheme)) {
+        return res.status(400).json({ error: `主题不存在：${incoming.terminalTheme}` });
+      }
+    }
+    res.json(saveSettings(incoming));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/themes', (_req, res) => {
+  res.json({
+    themes: listThemes(),
+    selected: loadSettings().terminalTheme,
+    shell: resolvePwsh() ? 'pwsh' : null,
+    ohMyPosh: Boolean(resolveOhMyPosh())
+  });
 });
 
 // 轮询自动输入来源：单一输入框既可直接填写内容，也可填写本地文本文件路径。
@@ -660,6 +794,55 @@ function runScript(script, ws) {
   }
 }
 
+/**
+ * 交互式终端：开一个带 oh-my-posh 提示符的 pwsh 会话。
+ * 与脚本运行不同，这里不执行具体脚本，只是把 shell 本身挂在 PTY 上，
+ * 由前端 xterm.js 直接交互（提示符、补全、历史都由 shell 负责）。
+ */
+function runInteractiveShell(ws) {
+  if (!pty) {
+    ws.send(JSON.stringify({ type: 'error', message: '交互式终端需要 node-pty，当前环境不可用。' }));
+    return null;
+  }
+  const pwsh = resolvePwsh();
+  if (!pwsh) {
+    ws.send(JSON.stringify({ type: 'error', message: '未找到 PowerShell 7（pwsh）。请安装后重试。' }));
+    return null;
+  }
+
+  const args = ['-NoLogo', '-NoProfile', '-NoExit'];
+  const themeName = loadSettings().terminalTheme;
+  const themePath = resolveThemePath(themeName);
+  const omp = resolveOhMyPosh();
+  if (omp && themePath) {
+    // 显式 init，避免依赖用户的 profile（脚本运行用的是 -NoProfile）。
+    const init = `oh-my-posh init pwsh --config '${themePath.replace(/'/g, "''")}' | Invoke-Expression`;
+    args.push('-Command', init);
+  }
+
+  try {
+    const term = pty.spawn(pwsh, args, {
+      name: 'xterm-256color',
+      cols: 120,
+      rows: 30,
+      cwd: ROOT,
+      env: {
+        ...process.env,
+        // 供脚本判断"当前是网页终端"用（历史上有同名变量但从未被设置过）。
+        SCRIPT_STUDIO_WEB_TERMINAL: '1',
+        SCRIPT_STUDIO_WEB_NO_PAUSE: '1',
+        TERM: 'xterm-256color'
+      }
+    });
+    term.onData((data) => ws.send(JSON.stringify({ type: 'data', data })));
+    term.onExit(({ exitCode }) => ws.send(JSON.stringify({ type: 'exit', code: exitCode })));
+    return term;
+  } catch (error) {
+    ws.send(JSON.stringify({ type: 'error', message: error.message }));
+    return null;
+  }
+}
+
 wss.on('connection', (ws, req) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const pollId = url.searchParams.get('poll');
@@ -669,6 +852,32 @@ wss.on('connection', (ws, req) => {
     job.clients.add(ws);
     ws.send(JSON.stringify({ type: 'poll-snapshot', job: pollJobSnapshot(job) }));
     ws.on('close', () => job.clients.delete(ws));
+    return;
+  }
+  // 交互式终端会话（新建终端）
+  if (url.searchParams.get('shell')) {
+    const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const settings = loadSettings();
+    ws.send(JSON.stringify({
+      type: 'ready',
+      token,
+      shell: { theme: settings.terminalTheme, cwd: ROOT }
+    }));
+    const child = runInteractiveShell(ws);
+    if (child) processes.set(token, child);
+    ws.on('message', (raw) => {
+      try {
+        const msg = JSON.parse(raw);
+        if (msg.type === 'input' && child && child.write && !child.killed) child.write(String(msg.data || ''));
+        if (msg.type === 'resize' && child && child.resize) {
+          const cols = Math.max(2, Math.min(500, Number(msg.cols) || 120));
+          const rows = Math.max(2, Math.min(300, Number(msg.rows) || 30));
+          try { child.resize(cols, rows); } catch {}
+        }
+        if (msg.type === 'stop' && child && child.kill) child.kill();
+      } catch {}
+    });
+    ws.on('close', () => { if (child && !child.killed) child.kill(); processes.delete(token); });
     return;
   }
   const scriptId = url.searchParams.get('script');

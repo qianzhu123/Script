@@ -9,13 +9,13 @@ echo ============================================================
 
 set "SCRIPT_DIR=%~dp0"
 for %%I in ("%SCRIPT_DIR%..") do set "PROJECT_DIR=%%~fI"
-if not defined DAILY_PROJECT_DIR set "DAILY_PROJECT_DIR=%PROJECT_DIR%"
-if not defined DAILY_OUTPUT_DIR set "DAILY_OUTPUT_DIR=%PROJECT_DIR%\output"
-if not defined DAILY_TEMP_DIR set "DAILY_TEMP_DIR=%PROJECT_DIR%\temp"
+if not defined SCRIPT_STUDIO_PROJECT_DIR set "SCRIPT_STUDIO_PROJECT_DIR=%PROJECT_DIR%"
+if not defined SCRIPT_STUDIO_OUTPUT_DIR set "SCRIPT_STUDIO_OUTPUT_DIR=%PROJECT_DIR%\output"
+if not defined SCRIPT_STUDIO_TEMP_DIR set "SCRIPT_STUDIO_TEMP_DIR=%PROJECT_DIR%\temp"
 
-set "REPORT_DIR=%DAILY_OUTPUT_DIR%\disk-clean"
+set "REPORT_DIR=%SCRIPT_STUDIO_OUTPUT_DIR%\disk-clean"
 if not exist "%REPORT_DIR%" mkdir "%REPORT_DIR%" >nul 2>nul
-if not exist "%DAILY_TEMP_DIR%" mkdir "%DAILY_TEMP_DIR%" >nul 2>nul
+if not exist "%SCRIPT_STUDIO_TEMP_DIR%" mkdir "%SCRIPT_STUDIO_TEMP_DIR%" >nul 2>nul
 set "REPORT=%REPORT_DIR%\clean-c.md"
 
 echo [INFO] report: %REPORT%
@@ -65,5 +65,5 @@ if "%EXIT_CODE%"=="0" (
 ) else (
  echo [FAILED] exit code: %EXIT_CODE%
 )
-if /i not "%DAILY_WEB_TERMINAL%"=="1" if /i not "%DAILY_WEB_NO_PAUSE%"=="1" pause
+if /i not "%SCRIPT_STUDIO_WEB_TERMINAL%"=="1" if /i not "%SCRIPT_STUDIO_WEB_NO_PAUSE%"=="1" pause
 exit /b %EXIT_CODE%

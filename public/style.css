@@ -28,6 +28,11 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .panel-header h1 { font-size: clamp(25px, 2.2vw, 34px); }
 .panel-header .secondary-btn { padding-inline: 14px; }
 .panel-header h1, .panel-header .secondary-btn { white-space: nowrap; }
+.panel-header-actions { display: flex; align-items: center; gap: 10px; }
+.theme-picker { display: flex; align-items: center; gap: 6px; padding: 0 10px; height: 44px; border: 1px solid #bad2f2; border-radius: 14px; background: white; }
+.theme-picker-label { color: var(--muted); font-size: 12px; font-weight: 800; white-space: nowrap; }
+.theme-picker select { border: 0; background: transparent; color: #155eef; font-weight: 800; font-size: 13px; max-width: 130px; outline: none; cursor: pointer; }
+.theme-picker select:disabled { color: var(--muted); cursor: not-allowed; }
 h1 { font-size: 34px; margin: 0; }
 h2 { margin: 0; font-size: 24px; }
 

@@ -65,9 +65,9 @@ if /i "!confirm!"=="Y" (
 goto :ok
 
 :fail
-if not "%DAILY_WEB_NO_PAUSE%"=="1" pause
+if not "%SCRIPT_STUDIO_WEB_NO_PAUSE%"=="1" pause
 exit /b 1
 
 :ok
-if not "%DAILY_WEB_NO_PAUSE%"=="1" pause
+if not "%SCRIPT_STUDIO_WEB_NO_PAUSE%"=="1" pause
 exit /b 0

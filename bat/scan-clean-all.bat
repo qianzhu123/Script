@@ -3,14 +3,14 @@ setlocal EnableExtensions
 chcp 65001 >nul 2>nul
 set "SCRIPT_DIR=%~dp0"
 for %%I in ("%SCRIPT_DIR%..") do set "PROJECT_DIR=%%~fI"
-if not defined DAILY_PROJECT_DIR set "DAILY_PROJECT_DIR=%PROJECT_DIR%"
-if not defined DAILY_OUTPUT_DIR set "DAILY_OUTPUT_DIR=%PROJECT_DIR%\output"
-if not defined DAILY_TEMP_DIR set "DAILY_TEMP_DIR=%PROJECT_DIR%\temp"
+if not defined SCRIPT_STUDIO_PROJECT_DIR set "SCRIPT_STUDIO_PROJECT_DIR=%PROJECT_DIR%"
+if not defined SCRIPT_STUDIO_OUTPUT_DIR set "SCRIPT_STUDIO_OUTPUT_DIR=%PROJECT_DIR%\output"
+if not defined SCRIPT_STUDIO_TEMP_DIR set "SCRIPT_STUDIO_TEMP_DIR=%PROJECT_DIR%\temp"
 set "PS1=%PROJECT_DIR%\ps1\Scan-CleanReport.ps1"
-set "REPORT_DIR=%DAILY_OUTPUT_DIR%\disk-clean"
+set "REPORT_DIR=%SCRIPT_STUDIO_OUTPUT_DIR%\disk-clean"
 set "EXIT_CODE=0"
 if not exist "%REPORT_DIR%" mkdir "%REPORT_DIR%" >nul 2>nul
-if not exist "%DAILY_TEMP_DIR%" mkdir "%DAILY_TEMP_DIR%" >nul 2>nul
+if not exist "%SCRIPT_STUDIO_TEMP_DIR%" mkdir "%SCRIPT_STUDIO_TEMP_DIR%" >nul 2>nul
 set "REPORT_C=%REPORT_DIR%\clean-c.md"
 set "REPORT_D=%REPORT_DIR%\clean-d.md"
 echo ============================================================
@@ -18,7 +18,7 @@ echo clean - C D (onlyscan,)
 echo ============================================================
 echo [INFO] C report: %REPORT_C%
 echo [INFO] D report: %REPORT_D%
-echo [INFO] tempDirectory: %DAILY_TEMP_DIR%
+echo [INFO] tempDirectory: %SCRIPT_STUDIO_TEMP_DIR%
 echo.
 if not exist "%PS1%" (
  echo [ERROR] PowerShell script: %PS1%
@@ -37,9 +37,9 @@ if errorlevel 1 (
  set "POWERSHELL_EXE=pwsh.exe"
 )
 )
-"%POWERSHELL_EXE%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%PS1%" -DriveLetter C -ReportPath "%REPORT_C%" -TempDir "%DAILY_TEMP_DIR%"
+"%POWERSHELL_EXE%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%PS1%" -DriveLetter C -ReportPath "%REPORT_C%" -TempDir "%SCRIPT_STUDIO_TEMP_DIR%"
 if errorlevel 1 set "EXIT_CODE=%ERRORLEVEL%"
-"%POWERSHELL_EXE%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%PS1%" -DriveLetter D -ReportPath "%REPORT_D%" -TempDir "%DAILY_TEMP_DIR%"
+"%POWERSHELL_EXE%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%PS1%" -DriveLetter D -ReportPath "%REPORT_D%" -TempDir "%SCRIPT_STUDIO_TEMP_DIR%"
 if errorlevel 1 set "EXIT_CODE=%ERRORLEVEL%"
 :END
 echo.
@@ -50,7 +50,7 @@ if "%EXIT_CODE%"=="0" (
 ) else (
  echo [FAILED] Failed.exit code: %EXIT_CODE%
 )
-if /i not "%DAILY_WEB_TERMINAL%"=="1" if /i not "%DAILY_WEB_NO_PAUSE%"=="1" pause
+if /i not "%SCRIPT_STUDIO_WEB_TERMINAL%"=="1" if /i not "%SCRIPT_STUDIO_WEB_NO_PAUSE%"=="1" pause
 exit /b %EXIT_CODE%
 
 

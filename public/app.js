@@ -2,6 +2,7 @@ const state = {
   config: { groups: [], scripts: [] },
   currentGroup: 'all',
   selectedScript: null,
+  shellAvailable: false,
   drag: { type: null, id: null },
   // 运行实例 tab 管理
   // sessions: Map<tabId, { scriptId, scriptName, ws, wsToken, output }>
@@ -64,10 +65,21 @@ let copyFeedbackTimer = null;
 
 // ── xterm.js 终端实例（ANSI 渲染）──────────────────────────
 const PLACEHOLDER_TEXT = '选择左侧脚本后，点击「运行」执行，或点击「文件夹」在资源管理器中打开。';
+// Nerd Font 必须排在等宽字体之前，否则 oh-my-posh 的 powerline 图标（U+E0B0 等）
+// 会落回普通等宽字体的缺字框，提示符显示成方块。
+const TERMINAL_FONT_FAMILY = [
+  'Cousine Nerd Font Mono',
+  'CaskaydiaCove Nerd Font',
+  'JetBrainsMono Nerd Font',
+  'FiraCode Nerd Font',
+  'Cascadia Code',
+  'Consolas',
+  'monospace'
+].join(', ');
 const terminal = new window.Terminal({
   convertEol: false,
   cursorBlink: true,
-  fontFamily: '"Cascadia Code", Consolas, Monaco, monospace',
+  fontFamily: TERMINAL_FONT_FAMILY,
   fontSize: 16,
   lineHeight: 1.25,
   scrollback: 10000,
@@ -374,8 +386,10 @@ function switchRunTab(tabId) {
   // 恢复该 tab 的输出
   renderTerminalOutput(session);
 
-  // 更新选中脚本为该 tab 对应的脚本
-  state.selectedScript = state.config.scripts.find((s) => s.id === session.scriptId) || state.selectedScript;
+  // 交互式终端 tab 不对应具体脚本，保留原来的选中脚本但标题显示终端名。
+  if (session.kind !== 'shell') {
+    state.selectedScript = state.config.scripts.find((s) => s.id === session.scriptId) || state.selectedScript;
+  }
   $('selectedTitle').textContent = session.scriptName;
 
   // stdin 输入框：运行中才可用
@@ -837,6 +851,135 @@ function renderSelected() {
   const activeSession = state.sessions.get(state.activeTabId);
   $('stopBtn').disabled = !activeSession?.ws && !activeSession?.polling?.active;
   syncCopyOutputButton();
+}
+
+// ── 交互式终端（带 oh-my-posh 提示符）─────────────────────
+function openInteractiveTerminal() {
+  const tabId = createTabId();
+  const theme = $('themeSelect').value || '';
+  const session = {
+    kind: 'shell',
+    scriptId: null,
+    scriptName: theme ? `终端 · ${theme}` : '终端',
+    ws: null,
+    wsToken: null,
+    output: '正在启动交互式终端...\n'
+  };
+  state.sessions.set(tabId, session);
+  state.activeTabId = tabId;
+
+  renderRunTabs();
+  terminalReset(session.output);
+  syncCopyOutputButton();
+  $('selectedTitle').textContent = session.scriptName;
+
+  // shell 会话始终可输入（提示符随时接受命令）
+  $('stdinInput').disabled = false;
+  fitTerminal();
+
+  const ws = new WebSocket(`ws://${location.host}/ws?shell=1`);
+  session.ws = ws;
+
+  ws.onopen = () => {
+    try { ws.send(JSON.stringify({ type: 'resize', cols: terminal.cols, rows: terminal.rows })); } catch {}
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      const msg = JSON.parse(event.data);
+      if (msg.type === 'ready') {
+        session.wsToken = msg.token;
+        if (state.activeTabId === tabId) {
+          terminalReset('');
+          setTimeout(fitTerminal, 30);
+        }
+        renderRunTabs();
+        renderSelected();
+      } else if (msg.type === 'data') {
+        appendTerminalData(tabId, session, msg.data);
+      } else if (msg.type === 'exit') {
+        const exitMsg = `\n\x1b[0m终端已退出，退出码: ${msg.code}`;
+        session.output += exitMsg;
+        session.ws = null;
+        session.wsToken = null;
+        if (state.activeTabId === tabId) {
+          terminalWrite(exitMsg);
+          $('stdinInput').disabled = true;
+        }
+        renderRunTabs();
+        renderSelected();
+      } else if (msg.type === 'error') {
+        const errMsg = `\n\x1b[0m错误: ${msg.message}`;
+        session.output += errMsg;
+        session.ws = null;
+        session.wsToken = null;
+        if (state.activeTabId === tabId) {
+          terminalWrite(errMsg);
+          $('stdinInput').disabled = true;
+        }
+        renderRunTabs();
+        renderSelected();
+      }
+    } catch {}
+  };
+
+  ws.onerror = () => {
+    const errMsg = '\n\x1b[0m终端连接失败';
+    session.output += errMsg;
+    session.ws = null;
+    session.wsToken = null;
+    if (state.activeTabId === tabId) {
+      terminalWrite(errMsg);
+      $('stdinInput').disabled = true;
+    }
+    renderRunTabs();
+    renderSelected();
+  };
+
+  ws.onclose = () => {
+    if (session.ws) {
+      session.ws = null;
+      session.wsToken = null;
+      if (state.activeTabId === tabId) $('stdinInput').disabled = true;
+      renderRunTabs();
+      renderSelected();
+    }
+  };
+}
+
+// ── 主题与设置 ────────────────────────────────────────────
+async function loadThemes() {
+  const select = $('themeSelect');
+  try {
+    const data = await api('/api/themes');
+    const themes = data.themes || [];
+    select.innerHTML = themes
+      .map((t) => `<option value="${escapeHtml(t.name)}">${escapeHtml(t.name)}</option>`)
+      .join('');
+    if (data.selected) select.value = data.selected;
+    if (!themes.length || !data.shell) {
+      select.disabled = true;
+      select.innerHTML = '<option value="">不可用</option>';
+      $('newTerminalBtn').title = data.shell
+        ? '未找到 oh-my-posh 主题库'
+        : '未找到 PowerShell 7（pwsh），无法启动交互式终端';
+    } else {
+      $('newTerminalBtn').disabled = false;
+    }
+    state.shellAvailable = Boolean(data.shell);
+  } catch (error) {
+    console.warn('主题列表加载失败：', error);
+    select.disabled = true;
+    select.innerHTML = '<option value="">不可用</option>';
+  }
+}
+
+async function saveTheme(theme) {
+  try {
+    await api('/api/settings', { method: 'PUT', body: JSON.stringify({ terminalTheme: theme }) });
+  } catch (error) {
+    console.warn('主题保存失败：', error);
+  }
 }
 
 // ── 运行脚本（WebSocket，每次新建一个 tab）────────────────
@@ -1416,10 +1559,12 @@ function setupStdinInput() {
     const text = $('stdinInput').value;
     $('stdinInput').value = '';
     try {
-      session.ws.send(JSON.stringify({ type: 'input', data: text + '\n' }));
+      // 交互式终端里 Enter 键产生的是 \r（终端原始模式），脚本 stdin 用 \n 即可。
+      const enter = session.kind === 'shell' ? '\r' : '\n';
+      session.ws.send(JSON.stringify({ type: 'input', data: text + enter }));
       // PTY 模式下子进程会回显输入（ConPTY 行回显），无需前端手动 echo。
       // 旧管道模式没有回显，保留一份到 session.output 供复制，但不重复渲染。
-      session.output = mergeTerminalOutput(session.output, `> ${text}\n`);
+      session.output = mergeTerminalOutput(session.output, `${text}\n`);
       syncCopyOutputButton();
     } catch {}
   });
@@ -1621,6 +1766,11 @@ setupStdinInput();
 setupPanelResizers();
 setupTerminalFullscreen();
 syncCopyOutputButton();
+
+$('newTerminalBtn').onclick = openInteractiveTerminal;
+$('themeSelect').onchange = (event) => saveTheme(event.target.value);
+$('newTerminalBtn').disabled = true; // 等 /api/themes 确认 pwsh 可用后再放开
+loadThemes();
 
 loadConfig().then(() => {
   // 附加能力失败时保留脚本管理主界面。

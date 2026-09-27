@@ -13,32 +13,32 @@
     {
       "id": "开发工具",
       "name": "开发工具",
-      "order": 10
+      "order": 11
     },
     {
       "id": "安卓逆向",
       "name": "逆向",
-      "order": 11
+      "order": 12
     },
     {
       "id": "文件处理",
       "name": "文件处理",
-      "order": 9
+      "order": 10
     },
     {
       "id": "端口与服务",
       "name": "端口与服务",
-      "order": 12
+      "order": 13
     },
     {
       "id": "磁盘清理",
       "name": "磁盘清理",
-      "order": 13
+      "order": 14
     },
     {
       "id": "系统维护",
       "name": "系统维护",
-      "order": 14
+      "order": 5
     },
     {
       "id": "网络检查",
@@ -53,7 +53,7 @@
     {
       "id": "group-mq9a888i",
       "name": "自动化",
-      "order": 5
+      "order": 6
     },
     {
       "id": "group-mq9j08xp",
@@ -68,17 +68,17 @@
     {
       "id": "group-mqtiytuf",
       "name": "视频处理",
-      "order": 7
+      "order": 8
     },
     {
       "id": "group-image",
       "name": "图片处理",
-      "order": 8
+      "order": 9
     },
     {
       "id": "group-mr0j2k9p",
       "name": "下载",
-      "order": 6
+      "order": 7
     },
     {
       "id": "group-mr30tkvo",
@@ -87,6 +87,52 @@
     }
   ],
   "scripts": [
+    {
+      "id": "bat-scripttoexe-bat",
+      "name": "脚本转EXE",
+      "groupId": "常用",
+      "path": "bat/ScriptToExe.bat",
+      "description": "脚本转exe",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 1
+    },
+    {
+      "id": "script-mq8b367y-taidte",
+      "name": "AI量化交易",
+      "groupId": "group-mq8b1r2n-6set70",
+      "path": "D:\\tools\\Productivity\\AI_Tools\\Vibe-Trading\\start.bat",
+      "description": "AI量化交易",
+      "priority": "normal",
+      "shell": "",
+      "ports": [
+        8899
+      ],
+      "order": 1
+    },
+    {
+      "id": "run_exam_check",
+      "name": "查询考试信息",
+      "groupId": "group-mq9a888i",
+      "path": "D:\\code\\python\\utils\\exam-check\\run_exam_check.bat",
+      "description": "查询考试信息",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 1
+    },
+    {
+      "id": "install-impeccable-skill",
+      "name": "install-impeccable-skill",
+      "groupId": "skill",
+      "path": "bat/install-impeccable-skill.bat",
+      "description": "挑出AI生成的丑UI，命令逐项修正",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 1
+    },
     {
       "id": "bat-create-startmenu-shortcut-bat",
       "name": "创建开始菜单快捷方式",
@@ -99,15 +145,37 @@
       "order": 2
     },
     {
-      "id": "bat-scripttoexe-bat",
-      "name": "脚本转EXE",
-      "groupId": "常用",
-      "path": "bat/ScriptToExe.bat",
-      "description": "脚本转exe",
+      "id": "start",
+      "name": "查询成绩",
+      "groupId": "group-mq9a888i",
+      "path": "D:\\code\\python\\utils\\score-check\\start.bat",
+      "description": "查询成绩信息",
       "priority": "normal",
       "shell": "",
       "ports": [],
-      "order": 1
+      "order": 2
+    },
+    {
+      "id": "install-tasteskill",
+      "name": "Install-TasteSkill",
+      "groupId": "skill",
+      "path": "bat/Install-TasteSkill.bat",
+      "description": "3个旋钮调布局/动画/密度",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 2
+    },
+    {
+      "id": "start-mqdejcxe",
+      "name": "WireMock服务",
+      "groupId": "",
+      "path": "",
+      "description": "启动WireMock模拟服务",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 2
     },
     {
       "id": "bat-nginxstart-bat",
@@ -121,11 +189,77 @@
       "order": 3
     },
     {
+      "id": "bat-generate_start_script-bat",
+      "name": "生成启动脚本",
+      "groupId": "常用",
+      "path": "bat/generate_start_script.bat",
+      "description": "自动检测项目类型并生成启动脚本",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 3
+    },
+    {
+      "id": "install-remotion",
+      "name": "install-remotion",
+      "groupId": "skill",
+      "path": "bat/install-remotion.bat",
+      "description": "Node.js / React 视频生成框架，较为专业",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 3
+    },
+    {
+      "id": "bat-browser_auto-bat",
+      "name": "网页自动化生成器",
+      "groupId": "group-mq9a888i",
+      "path": "bat/browser_auto.bat",
+      "description": "生成网页自动化脚本",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 3
+    },
+    {
       "id": "bat-killport-bat",
       "name": "结束端口进程",
       "groupId": "端口与服务",
       "path": "bat/KillPort.bat",
       "description": "根据端口号查找并结束占用进程",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 4
+    },
+    {
+      "id": "script-mq8afrzr-ntn2t5",
+      "name": "图片格式转换",
+      "groupId": "常用",
+      "path": "bat/convert-image.bat",
+      "description": "图片格式转换",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 4
+    },
+    {
+      "id": "install-hyperframes",
+      "name": "install-hyperframes",
+      "groupId": "skill",
+      "path": "bat/install-hyperframes.bat",
+      "description": "HTML视频框架安装与项目初始化，快速",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 4
+    },
+    {
+      "id": "ps1-scheduled_runner-ps1",
+      "name": "scheduled_runner",
+      "groupId": "group-mq9a888i",
+      "path": "bat/scheduled_runner.bat",
+      "description": "按间隔和总时长定时运行脚本",
       "priority": "normal",
       "shell": "",
       "ports": [],
@@ -229,17 +363,6 @@
       "shell": "",
       "ports": [],
       "order": 13
-    },
-    {
-      "id": "bat-generate_start_script-bat",
-      "name": "生成启动脚本",
-      "groupId": "常用",
-      "path": "bat/generate_start_script.bat",
-      "description": "自动检测项目类型并生成启动脚本",
-      "priority": "normal",
-      "shell": "",
-      "ports": [],
-      "order": 3
     },
     {
       "id": "bat-git_push_helper-bat",
@@ -396,17 +519,6 @@
       "order": 28
     },
     {
-      "id": "script-mq8afrzr-ntn2t5",
-      "name": "图片格式转换",
-      "groupId": "常用",
-      "path": "bat/convert-image.bat",
-      "description": "图片格式转换",
-      "priority": "normal",
-      "shell": "",
-      "ports": [],
-      "order": 4
-    },
-    {
       "id": "script-mq8ahdkv-rd3ouq",
       "name": "磁盘扫描报告",
       "groupId": "",
@@ -451,19 +563,6 @@
       "order": 33
     },
     {
-      "id": "script-mq8b367y-taidte",
-      "name": "AI量化交易",
-      "groupId": "group-mq8b1r2n-6set70",
-      "path": "D:\\tools\\Productivity\\AI_Tools\\Vibe-Trading\\start.bat",
-      "description": "AI量化交易",
-      "priority": "normal",
-      "shell": "",
-      "ports": [
-        8899
-      ],
-      "order": 1
-    },
-    {
       "id": "script-mq8cde1w-3hhexi",
       "name": "代理代码生成器",
       "groupId": "group-mq8bcb2k-ih45b6",
@@ -495,17 +594,6 @@
       "shell": "",
       "ports": [],
       "order": 37
-    },
-    {
-      "id": "run_exam_check",
-      "name": "查询考试信息",
-      "groupId": "group-mq9a888i",
-      "path": "D:\\code\\python\\utils\\exam-check\\run_exam_check.bat",
-      "description": "查询考试信息",
-      "priority": "normal",
-      "shell": "",
-      "ports": [],
-      "order": 1
     },
     {
       "id": "start_python",
@@ -552,72 +640,6 @@
       "order": 42
     },
     {
-      "id": "start",
-      "name": "查询成绩",
-      "groupId": "group-mq9a888i",
-      "path": "D:\\code\\python\\utils\\score-check\\start.bat",
-      "description": "查询成绩信息",
-      "priority": "normal",
-      "shell": "",
-      "ports": [],
-      "order": 2
-    },
-    {
-      "id": "install-impeccable-skill",
-      "name": "install-impeccable-skill",
-      "groupId": "skill",
-      "path": "bat/install-impeccable-skill.bat",
-      "description": "挑出AI生成的丑UI，命令逐项修正",
-      "priority": "normal",
-      "shell": "",
-      "ports": [],
-      "order": 1
-    },
-    {
-      "id": "install-tasteskill",
-      "name": "Install-TasteSkill",
-      "groupId": "skill",
-      "path": "bat/Install-TasteSkill.bat",
-      "description": "3个旋钮调布局/动画/密度",
-      "priority": "normal",
-      "shell": "",
-      "ports": [],
-      "order": 2
-    },
-    {
-      "id": "start-mqdejcxe",
-      "name": "WireMock服务",
-      "groupId": "",
-      "path": "",
-      "description": "启动WireMock模拟服务",
-      "priority": "normal",
-      "shell": "",
-      "ports": [],
-      "order": 2
-    },
-    {
-      "id": "install-remotion",
-      "name": "install-remotion",
-      "groupId": "skill",
-      "path": "bat/install-remotion.bat",
-      "description": "Node.js / React 视频生成框架，较为专业",
-      "priority": "normal",
-      "shell": "",
-      "ports": [],
-      "order": 3
-    },
-    {
-      "id": "install-hyperframes",
-      "name": "install-hyperframes",
-      "groupId": "skill",
-      "path": "bat/install-hyperframes.bat",
-      "description": "HTML视频框架安装与项目初始化，快速",
-      "priority": "normal",
-      "shell": "",
-      "ports": [],
-      "order": 4
-    },
-    {
       "id": "install-cloakbrowser-ai-rules",
       "name": "安装指纹浏览器规则",
       "groupId": "skill",
@@ -638,17 +660,6 @@
       "shell": "",
       "ports": [],
       "order": 49
-    },
-    {
-      "id": "bat-browser_auto-bat",
-      "name": "网页自动化生成器",
-      "groupId": "group-mq9a888i",
-      "path": "bat/browser_auto.bat",
-      "description": "生成网页自动化脚本",
-      "priority": "normal",
-      "shell": "",
-      "ports": [],
-      "order": 3
     },
     {
       "id": "ps1-video-speed-export-ps1",
@@ -838,15 +849,59 @@
       "order": 68
     },
     {
-      "id": "ps1-scheduled_runner-ps1",
-      "name": "scheduled_runner",
-      "groupId": "group-mq9a888i",
-      "path": "bat/scheduled_runner.bat",
-      "description": "按间隔和总时长定时运行脚本",
+      "id": "bat-feishu2md_export-bat",
+      "name": "feishu2md_export",
+      "groupId": "文件处理",
+      "path": "bat/feishu2md_export.bat",
+      "description": "将飞书文档或批量链接导出为Markdown",
       "priority": "normal",
       "shell": "",
       "ports": [],
-      "order": 4
+      "order": 69
+    },
+    {
+      "id": "bat-merge_markdown-bat",
+      "name": "merge_markdown",
+      "groupId": "文件处理",
+      "path": "bat/merge_markdown.bat",
+      "description": "将多个Markdown文档或文件夹按顺序合并为一个文件夹(README.md加assets)",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 70
+    },
+    {
+      "id": "ps1-deploy_mcp-ps1",
+      "name": "deploy_mcp",
+      "groupId": "group-mq9a888i",
+      "path": "bat/deploy_mcp.bat",
+      "description": "三端部署MCP到ClaudeCode/Codex/Cherry并生成导入JSON",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 72
+    },
+    {
+      "id": "ps1-bongocat_dll_update-ps1",
+      "name": "bongocat_dll_update",
+      "groupId": "group-mq9a888i",
+      "path": "bat/bongocat_dll_update.bat",
+      "description": "用下载目录中最新(24小时内)的BongoCat游戏DLL替换游戏目录里的DLL",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 73
+    },
+    {
+      "id": "ps1-opencode_token_switch-ps1",
+      "name": "opencode_token_switch",
+      "groupId": "开发工具",
+      "path": "bat/opencode_token_switch.bat",
+      "description": "安全切换OpenCode API令牌，仅修改全局配置中的apiKey",
+      "priority": "normal",
+      "shell": "",
+      "ports": [],
+      "order": 74
     }
   ]
 }
